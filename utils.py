@@ -43,7 +43,8 @@ def plot_covariance_ellipse(ax, mean, cov, confidence_level=1, color='black', al
     ax.add_patch(ellipse)
     return ellipse
 
-def ploat_observations(ax, q, o):
+
+def plot_observations(ax, q, o):
     """
     在给定的轴上绘制状态和观测点。
     参数:
