@@ -24,4 +24,5 @@ class ParticleFilter:
         return cumul_range
     
     def update(self, particles:np.ndarray, weights:np.ndarray, observations:np.ndarray):
-        pass
+        # sample from st-1
+        cumul_range = self.__build_cumulative_range(weights)
