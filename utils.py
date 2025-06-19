@@ -4,6 +4,7 @@ from scipy.stats import norm
 from copy import deepcopy
 from scipy.stats.distributions import chi2
 import numpy as np
+from observision_models import NormalObservation
 
 # 绘制协方差2D椭圆
 def plot_covariance_ellipse(ax, mean, cov, confidence_level=1, color='black', alpha=0.2, label=None):
@@ -58,7 +59,22 @@ def plot_observations(ax, q, o):
     
     ox = o[:, 0]
     oy = o[:, 1]
-    ax.scatter(ox, oy, s=15, color='r', label='Observations')
+
+    # evaluate probability of observations
+    probs = [NormalObservation.evaluation(
+        o[i], q[i, :2]) for i in range(len(q))]
+    probs /= np.max(probs)
+    color = plt.cm.get_cmap('viridis')(probs)
+
+    ax.scatter(ox, oy, s=15, color=color, label='Observations')
+
+    sm = plt.cm.ScalarMappable(
+        cmap='viridis', norm=plt.Normalize(vmin=0, vmax=1))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, shrink=0.5, pad=0.02)
+    cbar.set_label('Particle Weights')
+    # make colorbar smaller
+    cbar.ax.tick_params(labelsize=8, length=2, width=0.5)
 
     ax.set_xlabel('X Position')
     ax.set_ylabel('Y Position')
@@ -106,19 +122,49 @@ def plot_throwing(q, o = None, q_preds = None, sigma_preds = None):
 
     plt.show()
 
-def plot_particles(ax, particles, weights, color='blue'):
+
+def plot_particles(ax, particles, weights, colormap='viridis'):
     """
     在给定的轴上绘制粒子。
     参数:
         ax: Matplotlib 的 axes 对象。
         particles: 粒子状态数组 (N x 4)，每行表示一个粒子 [x, y, vx, vy]。
-        color: 粒子的颜色。
-        alpha: 粒子的透明度。
+        weights: 粒子的权重数组 (N, )。
+        colormap: 使用的颜色映射名称。
     """
     x, y = particles[:, 0], particles[:, 1]
     vx, vy = particles[:, 2], particles[:, 3]
-    max_weight = np.max(weights)
-    alpha = weights / max_weight  # 归一化权重到 [0, 1] 范围
-    alpha = np.clip(alpha, 0, 1)  # 确保 alpha 在 [0, 1] 范围内
-    ax.scatter(x, y, color='red', alpha=alpha, s=1)
-    ax.quiver(x, y, vx, vy, angles='xy', scale_units='xy', scale=3, color=color, alpha=alpha)
+    # map weights to colors, 0 to 1
+    color = plt.cm.get_cmap(colormap)(weights)
+
+    ax.scatter(x, y, color=color, alpha=0.5, s=1)
+    # ax.quiver(x, y, vx, vy, angles='xy', scale_units='xy',
+    #           scale=3, color=color, alpha=0.5)
+    # draw indicator for colormap
+    sm = plt.cm.ScalarMappable(
+        cmap=colormap, norm=plt.Normalize(vmin=0, vmax=1))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, shrink=0.5, pad=0.02)
+    cbar.set_label('Particle Weights')
+    # make colorbar smaller
+    cbar.ax.tick_params(labelsize=8, length=2, width=0.5)
+
+
+def random_cov(dim, scale=100):
+    L = np.tril(np.random.rand(dim, dim))*scale
+    cov = L@L.T
+    return cov
+
+
+def build_cov(var: list[float]):
+    dim = len(var)
+    cov = np.eye(dim)
+    np.fill_diagonal(cov, var)
+    return cov
+
+
+def random_diagonal_cov(dim: int, scale: float = 100):
+    var = np.random.rand(dim)*scale
+    cov = np.eye(dim)
+    np.fill_diagonal(cov, var)
+    return cov

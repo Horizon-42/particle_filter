@@ -1,5 +1,7 @@
 # simulate motion and observation
 import numpy as np
+from transition_models import NormalTransition
+from observision_models import NormalObservation
 class BallThrowingSimulator:
     """
     A simple ball simulator that simulates the motion of a ball under gravity.
@@ -17,25 +19,25 @@ class BallThrowingSimulator:
 
         # Transition model
         # qt = At*qt-1 + Bt*at-1
-        self.A = np.array([[1, 0, self.delta_t, 0],
-                           [0, 1, 0, self.delta_t],
-                           [0, 0, 1, 0],
-                           [0, 0, 0, 1]], dtype=float)
-        self.B = np.array([
-            [0, 0, 0],
-            [0, 0.5*self.delta_t**2, 0],
-            [0, 0, 0],
-            [0, self.delta_t, 0]
-        ], dtype=float)
-        # action is gravity
-        g = 10
-        self.action = np.array([0, -g, 0]).reshape((3,1))
+        # self.A = np.array([[1, 0, self.delta_t, 0],
+        #                    [0, 1, 0, self.delta_t],
+        #                    [0, 0, 1, 0],
+        #                    [0, 0, 0, 1]], dtype=float)
+        # self.B = np.array([
+        #     [0, 0, 0],
+        #     [0, 0.5*self.delta_t**2, 0],
+        #     [0, 0, 0],
+        #     [0, self.delta_t, 0]
+        # ], dtype=float)
+        # # action is gravity
+        # g = 10
+        # self.action = np.array([0, -g, 0]).reshape((3,1))
 
         # Observation model
         # zt = Ct*qt + vt
-        self.C = np.array([[1, 0, 0, 0],
-                           [0, 1, 0, 0]], dtype=float)
-        self.R = np.diag(observation_variance)  # observation noise covariance
+        # self.C = np.array([[1, 0, 0, 0],
+        #                    [0, 1, 0, 0]], dtype=float)
+        # self.R = np.diag(observation_variance)  # observation noise covariance
     
     def step(self, state):
         """
@@ -43,16 +45,19 @@ class BallThrowingSimulator:
         :param state: The current state of the ball [x, y, vx, vy].
         :return: The next state of the ball after applying the transition model.
         """
-        return self.A @ state + self.B @ self.action
-    def observe(self, state):
+        return NormalTransition.propagate(state)
+        # return NormalTransition.noisy_propagate(state)
+
+    def observe(self, state: np.ndarray):
         """
         Generate an observation based on the current state of the ball.
         :param state: The current state of the ball [x, y, vx, vy].
         :return: An observation of the ball's position with added Gaussian noise.
         """
-        observation = self.C @ state
-        noise = np.random.multivariate_normal([0, 0], self.R).reshape(-1, 1)
-        return observation + noise
+        # observation = self.C @ state
+        # noise = np.random.multivariate_normal([0, 0], self.R).reshape(-1, 1)
+        # return observation + noise
+        return NormalObservation.observe(state)
     def simulate(self, time=10):
         """
         Simulate the motion of the ball for a given amount of time.
