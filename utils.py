@@ -62,7 +62,7 @@ def plot_observations(ax, q, o):
 
     # evaluate probability of observations
     probs = [NormalObservation.evaluation(
-        o[i], q[i, :2]) for i in range(len(q))]
+        o[i], q[i, :]) for i in range(len(q))]
     probs /= np.max(probs)
     color = plt.cm.get_cmap('viridis')(probs)
 
@@ -148,23 +148,3 @@ def plot_particles(ax, particles, weights, colormap='viridis'):
     cbar.set_label('Particle Weights')
     # make colorbar smaller
     cbar.ax.tick_params(labelsize=8, length=2, width=0.5)
-
-
-def random_cov(dim, scale=100):
-    L = np.tril(np.random.rand(dim, dim))*scale
-    cov = L@L.T
-    return cov
-
-
-def build_cov(var: list[float]):
-    dim = len(var)
-    cov = np.eye(dim)
-    np.fill_diagonal(cov, var)
-    return cov
-
-
-def random_diagonal_cov(dim: int, scale: float = 100):
-    var = np.random.rand(dim)*scale
-    cov = np.eye(dim)
-    np.fill_diagonal(cov, var)
-    return cov

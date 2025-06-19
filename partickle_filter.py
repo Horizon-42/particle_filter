@@ -1,15 +1,6 @@
 import numpy as np
-
-
-class NormalTransition:
-    """
-    Qt = At@Qt-1 + Bt@action_t-1 + Noise(Nomal Distributed)
-    """
-    delta_t = 0.5
-    A = np.array([[1, 0, delta_t, 0],
-                  [0, 1, 0, delta_t],
-                  [0, 0, 1, 0],
-                  [0, 0, 0, 1]], dtype=float)
+from transition_models import NormalTransition
+from observision_models import NormalObservation
 
 class ParticleFilter:
     """
@@ -34,7 +25,7 @@ class ParticleFilter:
             cumul_range[i] = cumul_range[i-1]+weights[i]
         return cumul_range
     
-    def update(self, particles:np.ndarray, weights:np.ndarray, observations:np.ndarray):
+    def update(self, particles: np.ndarray, weights: np.ndarray, observation: np.ndarray):
         # sample from st-1
         cumul_range = self.__build_cumulative_range(weights)
         new_particles = np.zeros_like(particles)
@@ -50,3 +41,12 @@ class ParticleFilter:
                 else:
                     break
             new_particles[i, :] = particles[n_i, :]
+
+        # propagate the particles
+        new_particles = NormalTransition.noisy_propagate(new_particles)
+
+        new_weights = np.array([NormalObservation.evaluation(
+            observation, new_particles[i, :]) for i in range(self.N)])
+        new_weights /= np.sum(new_weights)
+
+        self.snaps.append((new_particles, new_weights))
