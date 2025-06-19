@@ -7,7 +7,9 @@ import numpy as np
 from observision_models import NormalObservation
 
 # 绘制协方差2D椭圆
-def plot_covariance_ellipse(ax, mean, cov, confidence_level=1, color='black', alpha=0.2, label=None):
+
+
+def plot_covariance_ellipse(ax, mean, cov, confidence_level=0.999999, color='black', alpha=0.2, label=None):
     """
     在给定轴上绘制一个2D协方差椭圆。
     参数:
@@ -26,6 +28,7 @@ def plot_covariance_ellipse(ax, mean, cov, confidence_level=1, color='black', al
     # 计算置信水平对应的卡方分布的临界值
     # 对于 2D 高斯分布，马氏距离平方服从自由度为 2 的卡方分布
     # s 是椭圆半轴的缩放因子
+    # if the confidence_level is 1, return inf
     s = np.sqrt(chi2.ppf(confidence_level, 2))
 
     # 对协方差矩阵进行特征值分解
@@ -41,11 +44,12 @@ def plot_covariance_ellipse(ax, mean, cov, confidence_level=1, color='black', al
     # 创建椭圆补丁对象
     ellipse = Ellipse(xy=mean, width=width, height=height, angle=angle,
                       facecolor=color, edgecolor=color, alpha=alpha, label=label)
+    # print(f"mean: {mean}, w: {width}, h: {height}")
     ax.add_patch(ellipse)
     return ellipse
 
 
-def plot_observations(ax, q, o):
+def plot_observations(ax, q: np.ndarray, o: np.ndarray, observe_cov: np.ndarray = None):
     """
     在给定的轴上绘制状态和观测点。
     参数:
@@ -61,20 +65,19 @@ def plot_observations(ax, q, o):
     oy = o[:, 1]
 
     # evaluate probability of observations
-    probs = [NormalObservation.evaluation(
-        o[i], q[i, :]) for i in range(len(q))]
-    probs /= np.max(probs)
-    color = plt.cm.get_cmap('viridis')(probs)
+    # probs = [NormalObservation.evaluation(
+    #     o[i], q[i, :]) for i in range(len(q))]
+    # probs /= np.max(probs)
+    # probs += 0.3
+    # probs = np.clip(probs, 0, 1)
+    # color = plt.cm.get_cmap('viridis')(probs)
 
-    ax.scatter(ox, oy, s=15, color=color, label='Observations')
+    if observe_cov is not None:
+        for i in range(q.shape[0]):
+            plot_covariance_ellipse(
+                ax, q[i, :2], observe_cov, color='green')
 
-    sm = plt.cm.ScalarMappable(
-        cmap='viridis', norm=plt.Normalize(vmin=0, vmax=1))
-    sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax, shrink=0.5, pad=0.02)
-    cbar.set_label('Particle Weights')
-    # make colorbar smaller
-    cbar.ax.tick_params(labelsize=8, length=2, width=0.5)
+    ax.scatter(ox, oy, s=15, color='r', alpha=0.5, label='Observations')
 
     ax.set_xlabel('X Position')
     ax.set_ylabel('Y Position')

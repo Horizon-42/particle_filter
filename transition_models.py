@@ -1,5 +1,5 @@
 import numpy as np
-from utils import random_diagonal_cov
+from math_utils import random_diagonal_cov
 
 class NormalTransition:
     """
@@ -31,3 +31,9 @@ class NormalTransition:
     @classmethod
     def noisy_propagate(cls, state:np.ndarray):
         return cls.propagate(state) + np.random.multivariate_normal([0]*4, cls.Q).reshape(-1, 1)
+
+
+if __name__ == "__main__":
+    states = np.random.rand(10, 4, 1)
+    transed = NormalTransition.propagate(states)
+    print(transed)
