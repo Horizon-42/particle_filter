@@ -1,14 +1,44 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
-from scipy.stats import norm
-from copy import deepcopy
 from scipy.stats.distributions import chi2
 import numpy as np
-from observision_models import NormalObservation
+
+
+def plot_density_ellipse(ax, mean, cov, n_std=6, color='blue', alpha=0.2):
+    """
+    在给定轴上绘制一个2D多元正态分布的概率密度椭圆（等密度线）。
+
+    参数:
+        ax: Matplotlib 的 axes 对象。
+        mean: 2D 均值向量 (例如, [x, y])。
+        cov: 2x2 协方差矩阵。
+        density_levels: 一个浮点数或浮点数列表，表示要绘制的概率密度值。
+                        如果为 None，则默认绘制一个在峰值处某个比例的等密度线。
+        color: 椭圆的颜色。
+        alpha: 椭圆的透明度。
+        label: 椭圆的标签。
+    """
+    # 确保协方差矩阵是2x2
+    if cov.shape != (2, 2):
+        raise ValueError(
+            "Covariance matrix must be 2x2 for 2D ellipse plotting.")
+
+    # 对协方差矩阵进行特征值分解
+    eigenvalues, eigenvectors = np.linalg.eig(cov)
+
+    # 特征值代表长短轴的平方
+    width, height = 2 * n_std * np.sqrt(eigenvalues)
+
+    # 计算椭圆的旋转角度 (以度为单位)
+    # arctan2 给出的是弧度，转换为度
+    angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
+
+    # 创建椭圆对象
+    ellipse = Ellipse(xy=mean, width=width, height=height,
+                      angle=angle, edgecolor=color, alpha=alpha)
+    ax.add_patch(ellipse)
 
 # 绘制协方差2D椭圆
-
-
 def plot_covariance_ellipse(ax, mean, cov, confidence_level=0.999999, color='black', alpha=0.2, label=None):
     """
     在给定轴上绘制一个2D协方差椭圆。
@@ -74,8 +104,8 @@ def plot_observations(ax, q: np.ndarray, o: np.ndarray, observe_cov: np.ndarray 
 
     if observe_cov is not None:
         for i in range(q.shape[0]):
-            plot_covariance_ellipse(
-                ax, q[i, :2], observe_cov, color='green')
+            plot_density_ellipse(
+                ax, q[i, :2].flatten(), observe_cov, color='green')
 
     ax.scatter(ox, oy, s=15, color='r', alpha=0.5, label='Observations')
 

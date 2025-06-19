@@ -1,7 +1,7 @@
 import numpy as np
 from math_utils import random_diagonal_cov, multivariate_normal_pdf_vectorized
 from scipy.stats import multivariate_normal
-
+from utils import plot_observations
 
 class NormalObservation:
     C = np.array([[1, 0, 0, 0],
@@ -14,6 +14,7 @@ class NormalObservation:
     @classmethod
     def observe(cls, state: np.ndarray):
         observation = cls.C @ state
+        # return observation
         return observation + cls.noise_distribution.rvs().reshape(-1, 1)
 
 
@@ -48,12 +49,23 @@ class NormalObservation:
 
 
 if __name__ == "__main__":
-    state = np.random.rand(10, 4, 1)*10
+    import matplotlib.pyplot as plt
+
+    state = np.random.rand(10, 4, 1)*100
+    print(state)
     # print(state)
     observe = NormalObservation.observe(state)
-    print(observe.shape)
+    print(observe)
+
+    for i in range(3):
+        print(state[i, :2] == observe[i])
 
     # probs = [NormalObservation.evaluation(
     #     observe[i], state[i, :]) for i in range(observe.shape[0])]
     probs = NormalObservation.evaluation(observe[0], state)
     print(probs)
+
+    fig, ax = plt.subplots(figsize=(12, 12))
+
+    plot_observations(ax, state, observe, NormalObservation.R)
+    plt.show()
