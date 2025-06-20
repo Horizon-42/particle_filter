@@ -7,15 +7,17 @@ class NormalObservation:
     C = np.array([[1, 0, 0, 0],
                   [0, 1, 0, 0]], dtype=float)
 
-    R = random_diagonal_cov(2, 100)
+    R = random_diagonal_cov(2, 10000)
 
     noise_distribution = multivariate_normal([0]*2, R)
 
     @classmethod
+    def ideal_observe(cls, state: np.ndarray):
+        return cls.C@state
+
+    @classmethod
     def observe(cls, state: np.ndarray):
-        observation = cls.C @ state
-        # return observation
-        return observation + cls.noise_distribution.rvs().reshape(-1, 1)
+        return cls.ideal_observe(state) + cls.noise_distribution.rvs().reshape(-1, 1)
 
     @classmethod
     def evaluation(cls, single_observe: np.ndarray, states: np.ndarray):
@@ -36,11 +38,6 @@ class NormalObservation:
         expected_observations = cls.C @ states
         expected_observations = expected_observations.reshape(
             -1, expected_observations.shape[1])
-
-        # Now, evaluate PDF for all particles at once.
-        # x is the single observation, mean is the array of expected observations (one for each particle)
-        # cov is the fixed observation noise covariance
-        # The pdf function will broadcast 'x' to match the shape of 'mean' and 'cov'
 
         # Ensure observe is 1D for pdf function
         weights = multivariate_normal_pdf_vectorized(

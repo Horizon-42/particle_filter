@@ -5,7 +5,7 @@ class NormalTransition:
     """
     Qt = At@Qt-1 + Bt@action_t-1 + Noise(Nomal Distributed)
     """
-    delta_t = 0.5
+    delta_t = 1
     A = np.array([[1, 0, delta_t, 0],
                   [0, 1, 0, delta_t],
                   [0, 0, 1, 0],
@@ -23,13 +23,6 @@ class NormalTransition:
 
     # sigma for normal noise
     Q = random_diagonal_cov(4, 1000)
-    # print(Q)
-    # Q = np.eye(4)
-    # Q_diag_x = 1000.0  # 位置维度可以有较大的噪声，用于探索
-    # Q_diag_y = 1000.0
-    # Q_diag_vx = 100.0  # 速度维度可以有相对较小的噪声
-    # Q_diag_vy = 100.0
-    # Q = np.diag([Q_diag_x, Q_diag_y, Q_diag_vx, Q_diag_vy])
 
 
     @classmethod

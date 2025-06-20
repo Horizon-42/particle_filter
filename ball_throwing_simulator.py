@@ -16,29 +16,8 @@ class BallThrowingSimulator:
         self.ball_num = ball_num
         self.init_state = init_state if init_state is not None else np.random.rand(
             4, ball_num)*np.array([[50], [50], [200], [200]])
+        print(self.init_state.shape)
 
-        # Transition model
-        # qt = At*qt-1 + Bt*at-1
-        # self.A = np.array([[1, 0, self.delta_t, 0],
-        #                    [0, 1, 0, self.delta_t],
-        #                    [0, 0, 1, 0],
-        #                    [0, 0, 0, 1]], dtype=float)
-        # self.B = np.array([
-        #     [0, 0, 0],
-        #     [0, 0.5*self.delta_t**2, 0],
-        #     [0, 0, 0],
-        #     [0, self.delta_t, 0]
-        # ], dtype=float)
-        # # action is gravity
-        # g = 10
-        # self.action = np.array([0, -g, 0]).reshape((3,1))
-
-        # Observation model
-        # zt = Ct*qt + vt
-        # self.C = np.array([[1, 0, 0, 0],
-        #                    [0, 1, 0, 0]], dtype=float)
-        # self.R = np.diag(observation_variance)  # observation noise covariance
-    
     def step(self, state):
         """
         Simulate one step of the ball's motion.
@@ -54,9 +33,6 @@ class BallThrowingSimulator:
         :param state: The current state of the ball [x, y, vx, vy].
         :return: An observation of the ball's position with added Gaussian noise.
         """
-        # observation = self.C @ state
-        # noise = np.random.multivariate_normal([0, 0], self.R).reshape(-1, 1)
-        # return observation + noise
         return NormalObservation.observe(state)
     def simulate(self, time=10):
         """

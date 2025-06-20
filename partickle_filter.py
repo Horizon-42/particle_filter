@@ -31,12 +31,11 @@ class ParticleFilter:
         # Compute cumulative sum of weights
         cumulative_sum = np.cumsum(weights)
 
-        # # Generate N evenly spaced points, shifted by a random offset
-        # # These are the "pointers" into the cumulative sum
-        # # The first random number is between 0 and 1/N
-        # r0 = np.random.uniform(0, 1/N)
-        # points = np.arange(N) / N + r0  # [r0, r0 + 1/N, ..., r0 + (N-1)/N]
-        points = np.random.rand(N)
+        # points = np.random.rand(N)
+        # Generate a starting point
+        u0 = np.random.uniform(0, 1/N)
+        # Generate N evenly spaced points
+        points = u0 + np.arange(N) / N
 
         # Find the indices of the particles to be selected
         # This is a highly efficient way to do it using numpy broadcasting and searchsorted
