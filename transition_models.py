@@ -22,7 +22,15 @@ class NormalTransition:
     action = np.array([0, -10, 0]).reshape((3,1))
 
     # sigma for normal noise
-    Q = random_diagonal_cov(4, 500)
+    Q = random_diagonal_cov(4, 1000)
+    # print(Q)
+    # Q = np.eye(4)
+    # Q_diag_x = 1000.0  # 位置维度可以有较大的噪声，用于探索
+    # Q_diag_y = 1000.0
+    # Q_diag_vx = 100.0  # 速度维度可以有相对较小的噪声
+    # Q_diag_vy = 100.0
+    # Q = np.diag([Q_diag_x, Q_diag_y, Q_diag_vx, Q_diag_vy])
+
 
     @classmethod
     def propagate(cls, state:np.ndarray):
@@ -30,10 +38,19 @@ class NormalTransition:
     
     @classmethod
     def noisy_propagate(cls, state:np.ndarray):
-        return cls.propagate(state) + np.random.multivariate_normal([0]*4, cls.Q).reshape(-1, 1)
+        # wrong approach, reapte one noise
+        # return cls.propagate(state) + np.random.multivariate_normal([0]*4, cls.Q).reshape(-1, 1)
+        N_particles = state.shape[0]
+        D_state = state.shape[1]
+
+        noise = np.random.multivariate_normal(
+            np.zeros(D_state), cls.Q, size=N_particles).reshape(N_particles, D_state, 1)
+        return cls.propagate(state) + noise
 
 
 if __name__ == "__main__":
     states = np.random.rand(10, 4, 1)
     transed = NormalTransition.propagate(states)
     print(transed)
+    noise_transed = NormalTransition.noisy_propagate(states)
+    print(np.mean(noise_transed**2-transed**2))

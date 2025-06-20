@@ -7,7 +7,7 @@ class NormalObservation:
     C = np.array([[1, 0, 0, 0],
                   [0, 1, 0, 0]], dtype=float)
 
-    R = random_diagonal_cov(2, 10000)
+    R = random_diagonal_cov(2, 100)
 
     noise_distribution = multivariate_normal([0]*2, R)
 
@@ -70,6 +70,8 @@ class NormalObservation:
 
         log_likelihoods = multivariate_normal_logpdf_vectorized(
             single_observe.flatten(), expected_observations, cls.R)
+        print(
+            f"loglikelihood max:{np.max(log_likelihoods)}, min{np.min(log_likelihoods)}, mean:{np.mean(log_likelihoods)}")
 
         max_log_likelihood = np.max(log_likelihoods)
 

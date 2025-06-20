@@ -12,8 +12,8 @@ class ParticleFilter:
         self.particles = np.random.rand(self.N, 4, 1)
         self.particles[:, 0] *= 300  # x position in [0, 3000]
         self.particles[:, 1] *= 300  # y position in [0, 3000]
-        self.particles[:, 2] *= 200 # velocity in [0, 200]
-        self.particles[:, 3] *= 200 # velocity in [0, 200]
+        self.particles[:, 2] *= 2000  # velocity in [0, 200]
+        self.particles[:, 3] *= 2000  # velocity in [0, 200]
 
         self.weights = np.ones(self.N) / self.N  # uniform weights
         self.snaps = [(self.particles, self.weights)]
@@ -45,6 +45,9 @@ class ParticleFilter:
         return particles[indices]  # Select particles using the found indices
 
     def update(self, particles: np.ndarray, weights: np.ndarray, observation: np.ndarray):
+        print(f"Neff:{1/np.sum(weights**2)}")
+        print(
+            f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
         # sample from st-1
         new_particles = self.systematic_resample(particles, weights)
 
