@@ -22,7 +22,7 @@ class NormalTransition:
     action = np.array([0, -10, 0]).reshape((3,1))
 
     # sigma for normal noise
-    Q = random_diagonal_cov(4, 50)
+    Q = random_diagonal_cov(4, 500)
 
     @classmethod
     def propagate(cls, state:np.ndarray):
