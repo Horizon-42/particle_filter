@@ -10,8 +10,8 @@ class ParticleFilter:
     def __init__(self, particle_num: int):
         self.N = particle_num
         self.particles = np.random.rand(self.N, 4, 1)
-        self.particles[:, 0] *= 3000 # x position in [0, 3000]
-        self.particles[:, 1] *= 3000 # y position in [0, 3000]
+        self.particles[:, 0] *= 300  # x position in [0, 3000]
+        self.particles[:, 1] *= 300  # y position in [0, 3000]
         self.particles[:, 2] *= 200 # velocity in [0, 200]
         self.particles[:, 3] *= 200 # velocity in [0, 200]
 
@@ -31,11 +31,12 @@ class ParticleFilter:
         # Compute cumulative sum of weights
         cumulative_sum = np.cumsum(weights)
 
-        # Generate N evenly spaced points, shifted by a random offset
-        # These are the "pointers" into the cumulative sum
-        # The first random number is between 0 and 1/N
-        r0 = np.random.uniform(0, 1/N)
-        points = np.arange(N) / N + r0  # [r0, r0 + 1/N, ..., r0 + (N-1)/N]
+        # # Generate N evenly spaced points, shifted by a random offset
+        # # These are the "pointers" into the cumulative sum
+        # # The first random number is between 0 and 1/N
+        # r0 = np.random.uniform(0, 1/N)
+        # points = np.arange(N) / N + r0  # [r0, r0 + 1/N, ..., r0 + (N-1)/N]
+        points = np.random.rand(N)
 
         # Find the indices of the particles to be selected
         # This is a highly efficient way to do it using numpy broadcasting and searchsorted
@@ -48,14 +49,11 @@ class ParticleFilter:
         new_particles = self.systematic_resample(particles, weights)
 
         # propagate the particles
-        new_particles = NormalTransition.propagate(new_particles)
+        new_particles = NormalTransition.noisy_propagate(new_particles)
         # print(new_particles[:10])
 
-        new_weights = NormalObservation.evaluation(observation, new_particles)
-        print(new_weights[:10])
-        print(f"new weights sum: {np.sum(new_weights)}")
-        new_weights /= np.sum(new_weights)
-        print(new_weights[:10])
+        new_weights = NormalObservation.log_evaluation(
+            observation, new_particles)
 
         self.snaps.append((new_particles, new_weights))
         return new_particles, new_weights
