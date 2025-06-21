@@ -1,23 +1,32 @@
 import numpy as np
 from transition_models import NormalTransition
 from observision_models import NormalObservation
+from math_utils import random_cov, random_diagonal_cov
 
 class ParticleFilter:
     """
     Condensation Algorithm 
     """
 
-    def __init__(self, particle_num: int):
+    def __init__(self, particle_num: int, init_state: np.ndarray = None):
         self.N = particle_num
-        self.particles = np.random.rand(self.N, 4, 1)
-        self.particles[:, 0] *= 300  # x position in [0, 3000]
-        self.particles[:, 1] *= 300  # y position in [0, 3000]
-        self.particles[:, 2] *= 2000  # velocity in [0, 200]
-        self.particles[:, 3] *= 2000  # velocity in [0, 200]
 
-        self.weights = np.ones(self.N) / self.N  # uniform weights
-        self.snaps = [(self.particles, self.weights)]
-    
+        # use gaussian to init particles
+        x = np.random.uniform(-100, 100)
+        y = np.random.uniform(0, 200)
+        vx = np.random.uniform(-100, 100)
+        vy = np.random.uniform(-100, 100)
+
+        sigma = random_diagonal_cov(4, 100000)
+        print(sigma)
+
+        particles = np.random.multivariate_normal(
+            [x, y, vx, vy], sigma, size=self.N).reshape(-1, 4, 1)
+        print(particles.shape)
+
+        weights = np.ones(self.N) / self.N  # uniform weights
+        self.snaps = [(particles, weights)]
+
     def systematic_resample(self, particles, weights):
         """
         Systematic resampling of particles based on their weights.
