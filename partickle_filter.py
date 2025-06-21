@@ -57,9 +57,9 @@ class ParticleFilter:
         return particles[indices]  # Select particles using the found indices
 
     def update(self, particles: np.ndarray, weights: np.ndarray, observation: np.ndarray):
-        print(f"Neff:{1/np.sum(weights**2)}")
-        print(
-            f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
+        # print(f"Neff:{1/np.sum(weights**2)}")
+        # print(
+        #     f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
         # sample from st-1
         new_particles = self.systematic_resample(particles, weights)
 

@@ -67,8 +67,8 @@ class NormalObservation:
 
         log_likelihoods = multivariate_normal_logpdf_vectorized(
             single_observe.flatten(), expected_observations, cls.R)
-        print(
-            f"loglikelihood max:{np.max(log_likelihoods)}, min{np.min(log_likelihoods)}, mean:{np.mean(log_likelihoods)}")
+        # print(
+        #     f"loglikelihood max:{np.max(log_likelihoods)}, min{np.min(log_likelihoods)}, mean:{np.mean(log_likelihoods)}")
 
         max_log_likelihood = np.max(log_likelihoods)
 
