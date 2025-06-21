@@ -17,19 +17,12 @@ class ParticleFilter:
         vx = np.random.uniform(-50, 50)
         vy = np.random.uniform(-50, 50)
 
-        # sigma = random_diagonal_cov(4, 100000)
-        # print(sigma)
-
-        # particles = np.random.multivariate_normal(
-        #     [x, y, vx, vy], sigma, size=self.N).reshape(-1, 4, 1)
-        # print(particles.shape)
-
         xys = sample_points_in_circle((x, y), 2000, self.N)
         vs = sample_points_in_circle((vx, vy), 30, self.N)
-        particles = np.concatenate([xys, vs], 1).reshape(self.N, state_dim, 1)
+        self.init_particles = np.concatenate(
+            [xys, vs], 1).reshape(self.N, state_dim, 1)
+        self.init_weights = np.ones(self.N) / self.N  # uniform weights
 
-        weights = np.ones(self.N) / self.N  # uniform weights
-        self.snaps = [(particles, weights)]
 
     def systematic_resample(self, particles, weights):
         """
@@ -57,9 +50,9 @@ class ParticleFilter:
         return particles[indices]  # Select particles using the found indices
 
     def update(self, particles: np.ndarray, weights: np.ndarray, observation: np.ndarray):
-        # print(f"Neff:{1/np.sum(weights**2)}")
-        # print(
-        #     f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
+        print(f"Neff:{1/np.sum(weights**2)}")
+        print(
+            f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
         # sample from st-1
         new_particles = self.systematic_resample(particles, weights)
 
@@ -70,5 +63,4 @@ class ParticleFilter:
         new_weights = NormalObservation.log_evaluation(
             observation, new_particles)
 
-        self.snaps.append((new_particles, new_weights))
         return new_particles, new_weights
