@@ -1,28 +1,32 @@
 import numpy as np
 from transition_models import NormalTransition
 from observision_models import NormalObservation
-from math_utils import random_cov, random_diagonal_cov
+from math_utils import random_cov, random_diagonal_cov, sample_points_in_circle
 
 class ParticleFilter:
     """
     Condensation Algorithm 
     """
 
-    def __init__(self, particle_num: int, init_state: np.ndarray = None):
+    def __init__(self, particle_num: int, init_state: np.ndarray = None, state_dim: int = 4):
         self.N = particle_num
 
         # use gaussian to init particles
         x = np.random.uniform(-100, 100)
         y = np.random.uniform(0, 200)
-        vx = np.random.uniform(-100, 100)
-        vy = np.random.uniform(-100, 100)
+        vx = np.random.uniform(-50, 50)
+        vy = np.random.uniform(-50, 50)
 
-        sigma = random_diagonal_cov(4, 100000)
-        print(sigma)
+        # sigma = random_diagonal_cov(4, 100000)
+        # print(sigma)
 
-        particles = np.random.multivariate_normal(
-            [x, y, vx, vy], sigma, size=self.N).reshape(-1, 4, 1)
-        print(particles.shape)
+        # particles = np.random.multivariate_normal(
+        #     [x, y, vx, vy], sigma, size=self.N).reshape(-1, 4, 1)
+        # print(particles.shape)
+
+        xys = sample_points_in_circle((x, y), 2000, self.N)
+        vs = sample_points_in_circle((vx, vy), 30, self.N)
+        particles = np.concatenate([xys, vs], 1).reshape(self.N, state_dim, 1)
 
         weights = np.ones(self.N) / self.N  # uniform weights
         self.snaps = [(particles, weights)]

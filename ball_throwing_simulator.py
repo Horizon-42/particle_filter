@@ -47,7 +47,7 @@ class BallThrowingSimulator:
             raise ValueError("Time must be greater than zero to simulate motion.")
         state = self.init_state.copy()
         states.append(state)
-        observations.append(self.observe(state))
+        # initial state have no observation
         for _ in range(steps):
             state = self.step(state)
             # if state[1]< 0: # touch the ground

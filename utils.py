@@ -171,8 +171,8 @@ def plot_particles(ax, particles, weights, colormap='viridis'):
     color = plt.cm.get_cmap(colormap)(weights)
 
     ax.scatter(x, y, color=color, alpha=0.5, s=1)
-    # ax.quiver(x, y, vx, vy, angles='xy', scale_units='xy',
-    #           scale=3, color=color, alpha=0.5)
+    ax.quiver(x, y, vx, vy, angles='xy', scale_units='xy',
+              scale=3, color=color, alpha=0.5)
     # draw indicator for colormap
     sm = plt.cm.ScalarMappable(
         cmap=colormap, norm=plt.Normalize(vmin=0, vmax=1))

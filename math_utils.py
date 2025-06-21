@@ -80,3 +80,24 @@ def multivariate_normal_logpdf_vectorized(x: np.ndarray, means: np.ndarray, cov:
     log_pdf_values = log_norm_const + exponents
 
     return log_pdf_values
+
+
+def sample_points_in_circle(center, radius, n_points):
+    """
+    Uniformly sample 2D points inside a circle.
+
+    Parameters:
+        center: (x, y) tuple of the circle center
+        radius: radius of the circle
+        n_points: number of points to generate
+
+    Returns:
+        points: (n_points, 2) array of sampled points
+    """
+    theta = np.random.uniform(0, 2*np.pi, n_points)
+    r = radius * np.sqrt(np.random.uniform(0, 1, n_points))  # √ for uniformity
+
+    x = center[0] + r * np.cos(theta)
+    y = center[1] + r * np.sin(theta)
+
+    return np.stack((x, y), axis=-1)
