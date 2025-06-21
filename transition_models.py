@@ -22,7 +22,13 @@ class NormalTransition:
     action = np.array([0, -10, 0]).reshape((3,1))
 
     # sigma for normal noise
-    Q = random_diagonal_cov(4, 1000)
+    # Q = random_diagonal_cov(4, 1000)
+    Q = np.array([
+        [1000, 0, 0, 0],
+        [0, 1000, 0, 0],
+        [0, 0, 100, 0],
+        [0, 0, 0, 100],
+    ], dtype=float)
 
 
     @classmethod
