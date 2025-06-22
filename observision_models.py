@@ -18,7 +18,7 @@ class NormalObservation(BallObservation):
         super().__init__()
 
         self.d_observe = ball_num*2
-        self.R = random_diagonal_cov(self.d_observe, 1)
+        self.R = random_diagonal_cov(self.d_observe, 10)
 
         self.noise_distribution = multivariate_normal(
             np.zeros(self.d_observe), self.R)
@@ -26,7 +26,8 @@ class NormalObservation(BallObservation):
     def observe(self, state: np.ndarray):
         particle_num = state.shape[0]
         ball_num = state.shape[-1]
-        return super().observe(state) + self.noise_distribution.rvs(size=particle_num).reshape(particle_num, -1, ball_num)
+        print(f"Ball num:{ball_num}")
+        return super().observe(state) + self.noise_distribution.rvs(size=particle_num).reshape(particle_num, 2, ball_num)
         return super().observe(state)
 
     def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
@@ -81,16 +82,22 @@ class NormalObservation(BallObservation):
         print(f"Single observation shape:{single_observe.shape}")
         print(f"R shape:{self.R.shape}")
 
+        print(f"single observ:{single_observe}")
+        print(
+            f"single observ reshaped:{single_observe.reshape(-1, self.d_observe, order='F').flatten()}")
+
         log_likelihoods = multivariate_normal_logpdf_vectorized(
             single_observe.flatten(), expected_observations, self.R)
         print(
             f"loglikelihood max:{np.max(log_likelihoods)}, min{np.min(log_likelihoods)}, mean:{np.mean(log_likelihoods)}")
+        print(log_likelihoods)
 
         max_log_likelihood = np.max(log_likelihoods)
 
         # 将对数似然转换为非归一化权重，通过减去最大值避免exp(大正数)溢出
         # np.exp(log(w_i) - log(w_max)) = w_i / w_max
         unnormalized_weights = np.exp(log_likelihoods - max_log_likelihood)
+        print(unnormalized_weights)
 
         return unnormalized_weights / np.sum(unnormalized_weights)
 
@@ -100,7 +107,7 @@ class NormalObservation(BallObservation):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    ball_num = 2
+    ball_num = 3
     state = np.random.rand(3, 4, ball_num)*100
 
     ideal_observ = BallObservation()
@@ -113,7 +120,7 @@ if __name__ == "__main__":
     print("--------------with onise---------------------")
 
     # print(state)
-    observe_model = NormalObservation(2)
+    observe_model = NormalObservation(ball_num)
     noisy_observe = observe_model.observe(state)
     print(f"Noise observe:\n {noisy_observe}")
 

@@ -13,7 +13,7 @@ class ParticleFilter:
 
         # init transition model and observation model
         self.trans_model: NormalTransition = NormalTransition(delta_t=delta_t)
-        self.observe_model: NormalObservation = NormalObservation()
+        self.observe_model: NormalObservation = NormalObservation(ball_num=1)
 
         if init_state is not None:
             x, y, vx, vy = init_state
