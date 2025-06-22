@@ -14,15 +14,19 @@ class BallObservation:
 
 
 class NormalObservation(BallObservation):
-    def __init__(self):
+    def __init__(self, ball_num: int):
         super().__init__()
 
-        self.R = random_diagonal_cov(2, 10000)
+        self.d_observe = ball_num*2
+        self.R = random_diagonal_cov(self.d_observe, 1)
 
-        self.noise_distribution = multivariate_normal([0]*2, self.R)
+        self.noise_distribution = multivariate_normal(
+            np.zeros(self.d_observe), self.R)
 
     def observe(self, state: np.ndarray):
-        return super().observe(state) + self.noise_distribution.rvs().reshape(-1, 1)
+        particle_num = state.shape[0]
+        ball_num = state.shape[-1]
+        return super().observe(state) + self.noise_distribution.rvs(size=particle_num).reshape(particle_num, -1, ball_num)
         return super().observe(state)
 
     def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
@@ -49,6 +53,7 @@ class NormalObservation(BallObservation):
             single_observe.flatten(), expected_observations, self.R)
         return weights/np.sum(weights)
 
+
     def log_evaluation(self, single_observe: np.ndarray, states: np.ndarray):
         """
         Evaluates the likelihood of an observation given multiple particle states.
@@ -65,14 +70,21 @@ class NormalObservation(BallObservation):
         """
         # This assumes states are (N, D_state, 1) or (N, D_state)
         # If states are (N, D_state, 1) -> (N, D_obs, 1)
-        expected_observations = self.C @ states
+        print(f"observe dimension:{self.d_observe}")
+        expected_observations = super().observe(states)
+        print(expected_observations)
+        print(f"Expected observation shape:{expected_observations.shape}")
         expected_observations = expected_observations.reshape(
-            -1, expected_observations.shape[1])
+            -1, self.d_observe, order='F')
+        print(expected_observations)
+        print(f"Expected observation shape:{expected_observations.shape}")
+        print(f"Single observation shape:{single_observe.shape}")
+        print(f"R shape:{self.R.shape}")
 
         log_likelihoods = multivariate_normal_logpdf_vectorized(
             single_observe.flatten(), expected_observations, self.R)
-        # print(
-        #     f"loglikelihood max:{np.max(log_likelihoods)}, min{np.min(log_likelihoods)}, mean:{np.mean(log_likelihoods)}")
+        print(
+            f"loglikelihood max:{np.max(log_likelihoods)}, min{np.min(log_likelihoods)}, mean:{np.mean(log_likelihoods)}")
 
         max_log_likelihood = np.max(log_likelihoods)
 
@@ -88,22 +100,36 @@ class NormalObservation(BallObservation):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    state = np.random.rand(2, 4, 1)*100
-    print(state)
+    ball_num = 2
+    state = np.random.rand(3, 4, ball_num)*100
+
+    ideal_observ = BallObservation()
+
+    print(f"True states:\n {state}")
+
+    ideal_obs = ideal_observ.observe(state)
+    print(f"Ideal observation:\n{ideal_obs}")
+
+    print("--------------with onise---------------------")
+
     # print(state)
-    observe_model = NormalObservation()
-    observe = observe_model.observe(state)
-    print(observe)
+    observe_model = NormalObservation(2)
+    noisy_observe = observe_model.observe(state)
+    print(f"Noise observe:\n {noisy_observe}")
 
-    for i in range(observe.shape[0]):
-        print(state[i, :2] == observe[i])
+    print(f"Diff: {np.mean((ideal_obs-noisy_observe)**2)}")
 
-    # probs = [NormalObservation.evaluation(
-    #     observe[i], state[i, :]) for i in range(observe.shape[0])]
-    probs = observe_model.evaluation(observe[0], state)
+    probs = observe_model.log_evaluation(noisy_observe[0], state)
     print(probs)
 
     fig, ax = plt.subplots(figsize=(12, 12))
 
-    plot_observations(ax, state, observe, observe_model.R)
+    plot_observations(ax, state[:, :, 0],
+                      noisy_observe[:, :, 0], observe_model.R[:2, :2])
+
+    plot_observations(ax, state[:, :, 1],
+                      noisy_observe[:, :, 1], observe_model.R[2:4, 2:4])
+
+    # plot_observations(ax, state[:, :, 2],
+    #                   noisy_observe[:, :, 2], observe_model.R[4:6, 4:6])
     plt.show()
