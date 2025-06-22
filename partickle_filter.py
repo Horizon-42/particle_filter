@@ -8,26 +8,27 @@ class ParticleFilter:
     Condensation Algorithm 
     """
 
-    def __init__(self, delta_t: float, particle_num: int, init_state: np.ndarray = None, state_dim: int = 4):
+    def __init__(self, delta_t: float, particle_num: int, ball_num: int):
         self.N = particle_num
 
         # init transition model and observation model
         self.trans_model: NormalTransition = NormalTransition(delta_t=delta_t)
-        self.observe_model: NormalObservation = NormalObservation(ball_num=1)
+        self.observe_model: NormalObservation = NormalObservation(
+            ball_num=ball_num)
 
-        if init_state is not None:
-            x, y, vx, vy = init_state
-        else:
+        self.init_particles = np.zeros((particle_num, 4, ball_num))
+        for i in range(ball_num):
             # use gaussian to init particles
             x = np.random.uniform(-100, 100)
             y = np.random.uniform(0, 200)
             vx = np.random.uniform(-50, 50)
             vy = np.random.uniform(-50, 50)
 
-        xys = sample_points_in_circle((x, y), 2000, self.N)
-        vs = sample_points_in_circle((vx, vy), 500, self.N)
-        self.init_particles = np.concatenate(
-            [xys, vs], 1).reshape(self.N, state_dim, 1)
+            xys = sample_points_in_circle((x, y), 2000, self.N)
+            vs = sample_points_in_circle((vx, vy), 500, self.N)
+
+            self.init_particles[:, :, i] = np.concatenate(
+                [xys, vs], 1).reshape(particle_num, 4)
         self.init_weights = np.ones(self.N) / self.N  # uniform weights
 
     def systematic_resample(self, particles: np.ndarray, weights: np.ndarray):

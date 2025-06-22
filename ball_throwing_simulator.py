@@ -20,7 +20,7 @@ class BallThrowingSimulator:
         print(self.init_state.shape)
 
         self.trans_model = BallTransition(delta_t)
-        self.observe_model = NormalObservation()
+        self.observe_model = NormalObservation(ball_num)
 
     def step(self, state):
         """
@@ -37,7 +37,7 @@ class BallThrowingSimulator:
         :param state: The current state of the ball [x, y, vx, vy].
         :return: An observation of the ball's position with added Gaussian noise.
         """
-        return NormalObservation.observe(state)
+        return self.observe_model.observe(state)
     def simulate(self, time=10):
         """
         Simulate the motion of the ball for a given amount of time.
@@ -57,6 +57,6 @@ class BallThrowingSimulator:
             # if state[1]< 0: # touch the ground
             #     break
             states.append(state)
-            observations.append(self.observe_model.observe(state))
+            observations.append(self.observe(state))
 
         return np.array(states), np.array(observations)

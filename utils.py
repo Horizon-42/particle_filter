@@ -94,20 +94,15 @@ def plot_observations(ax, q: np.ndarray, o: np.ndarray, observe_cov: np.ndarray 
     ox = o[:, 0]
     oy = o[:, 1]
 
-    # evaluate probability of observations
-    # probs = [NormalObservation.evaluation(
-    #     o[i], q[i, :]) for i in range(len(q))]
-    # probs /= np.max(probs)
-    # probs += 0.3
-    # probs = np.clip(probs, 0, 1)
-    # color = plt.cm.get_cmap('viridis')(probs)
-
+    ball_num = o.shape[2]
     if observe_cov is not None:
-        for i in range(q.shape[0]):
-            plot_density_ellipse(
-                ax, q[i, :2].flatten(), observe_cov, color='green')
+        for k in range(ball_num):
+            for i in range(q.shape[0]):
+                plot_density_ellipse(
+                    ax, q[i, :2, k].flatten(), observe_cov[2*k:2*(k+1), 2*k:2*(k+1)], color='blue')
 
-    ax.scatter(ox, oy, s=15, color='r', alpha=0.5, label='Observations')
+    ax.scatter(ox[:, 0], oy[:, 1], s=15, color='r',
+               alpha=0.5, label='Observations')
 
     ax.set_xlabel('X Position')
     ax.set_ylabel('Y Position')
@@ -156,7 +151,7 @@ def plot_throwing(q, o = None, q_preds = None, sigma_preds = None):
     plt.show()
 
 
-def plot_particles(ax, particles, weights, colormap='viridis'):
+def plot_particles(ax, particles: np.ndarray, weights: np.ndarray, colormap='viridis'):
     """
     在给定的轴上绘制粒子。
     参数:
@@ -170,9 +165,11 @@ def plot_particles(ax, particles, weights, colormap='viridis'):
     # map weights to colors, 0 to 1
     color = plt.cm.get_cmap(colormap)(weights)
 
-    ax.scatter(x, y, color=color, alpha=0.5, s=1)
-    ax.quiver(x, y, vx, vy, angles='xy', scale_units='xy',
-              scale=3, color=color, alpha=0.5)
+    ball_num = particles.shape[2]
+    for k in range(ball_num):
+        ax.scatter(x[:, k], y[:, k], color=color, alpha=0.5, s=1)
+        ax.quiver(x[:, k], y[:, k], vx[:, k], vy[:, k], angles='xy', scale_units='xy',
+                  scale=3, color=color, alpha=0.5)
     # draw indicator for colormap
     sm = plt.cm.ScalarMappable(
         cmap=colormap, norm=plt.Normalize(vmin=0, vmax=1))

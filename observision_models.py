@@ -14,7 +14,7 @@ class BallObservation:
 
 
 class NormalObservation(BallObservation):
-    def __init__(self, ball_num: int, var_scale: float = 100):
+    def __init__(self, ball_num: int, var_scale: float = 1000):
         super().__init__()
 
         self.d_observe = ball_num*2
@@ -26,8 +26,10 @@ class NormalObservation(BallObservation):
     def observe(self, state: np.ndarray):
         particle_num = state.shape[0]
         ball_num = state.shape[-1]
-        print(f"Ball num:{ball_num}")
-        return super().observe(state) + self.noise_distribution.rvs(size=particle_num).reshape(particle_num, 2, ball_num)
+        noise = self.noise_distribution.rvs(size=particle_num)
+        print(f"noise shape:{noise.shape}")
+        return super().observe(state)
+        # + noise.reshape(particle_num, 2, ball_num)
 
     def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
         """
