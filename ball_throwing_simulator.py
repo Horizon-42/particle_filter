@@ -1,6 +1,6 @@
 # simulate motion and observation
 import numpy as np
-from transition_models import NormalTransition
+from transition_models import NormalTransition, BallTransition
 from observision_models import NormalObservation
 class BallThrowingSimulator:
     """
@@ -11,12 +11,16 @@ class BallThrowingSimulator:
     Observations are generated as noisy measurements of the position. 
     The observation noise is assumed to be Gaussian.
     """
-    def __init__(self, delta_t=0.5, init_state=None, ball_num=1, observation_variance=[10, 10]):
+
+    def __init__(self, delta_t=0.5, init_state=None, ball_num=1):
         self.delta_t = delta_t
         self.ball_num = ball_num
         self.init_state = init_state if init_state is not None else np.random.rand(
             4, ball_num)*np.array([[50], [50], [200], [200]])
         print(self.init_state.shape)
+
+        self.trans_model = BallTransition(delta_t)
+        self.observe_model = NormalObservation()
 
     def step(self, state):
         """
@@ -24,7 +28,7 @@ class BallThrowingSimulator:
         :param state: The current state of the ball [x, y, vx, vy].
         :return: The next state of the ball after applying the transition model.
         """
-        return NormalTransition.propagate(state)
+        return self.trans_model.propagate(state)
         # return NormalTransition.noisy_propagate(state)
 
     def observe(self, state: np.ndarray):
@@ -53,6 +57,6 @@ class BallThrowingSimulator:
             # if state[1]< 0: # touch the ground
             #     break
             states.append(state)
-            observations.append(self.observe(state))
+            observations.append(self.observe_model.observe(state))
 
         return np.array(states), np.array(observations)
