@@ -14,11 +14,11 @@ class BallObservation:
 
 
 class NormalObservation(BallObservation):
-    def __init__(self, ball_num: int):
+    def __init__(self, ball_num: int, var_scale: float = 100):
         super().__init__()
 
         self.d_observe = ball_num*2
-        self.R = random_diagonal_cov(self.d_observe, 10)
+        self.R = random_diagonal_cov(self.d_observe, var_scale)
 
         self.noise_distribution = multivariate_normal(
             np.zeros(self.d_observe), self.R)
@@ -28,7 +28,6 @@ class NormalObservation(BallObservation):
         ball_num = state.shape[-1]
         print(f"Ball num:{ball_num}")
         return super().observe(state) + self.noise_distribution.rvs(size=particle_num).reshape(particle_num, 2, ball_num)
-        return super().observe(state)
 
     def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
         """
@@ -71,33 +70,33 @@ class NormalObservation(BallObservation):
         """
         # This assumes states are (N, D_state, 1) or (N, D_state)
         # If states are (N, D_state, 1) -> (N, D_obs, 1)
-        print(f"observe dimension:{self.d_observe}")
+        # print(f"observe dimension:{self.d_observe}")
         expected_observations = super().observe(states)
-        print(expected_observations)
-        print(f"Expected observation shape:{expected_observations.shape}")
+        # print(expected_observations)
+        # print(f"Expected observation shape:{expected_observations.shape}")
         expected_observations = expected_observations.reshape(
             -1, self.d_observe, order='F')
-        print(expected_observations)
-        print(f"Expected observation shape:{expected_observations.shape}")
-        print(f"Single observation shape:{single_observe.shape}")
-        print(f"R shape:{self.R.shape}")
+        # print(expected_observations)
+        # print(f"Expected observation shape:{expected_observations.shape}")
+        # print(f"Single observation shape:{single_observe.shape}")
+        # print(f"R shape:{self.R.shape}")
 
-        print(f"single observ:{single_observe}")
-        print(
-            f"single observ reshaped:{single_observe.reshape(-1, self.d_observe, order='F').flatten()}")
+        # print(f"single observ:{single_observe}")
+        # print(
+        #     f"single observ reshaped:{single_observe.reshape(-1, self.d_observe, order='F').flatten()}")
 
         log_likelihoods = multivariate_normal_logpdf_vectorized(
             single_observe.flatten(), expected_observations, self.R)
-        print(
-            f"loglikelihood max:{np.max(log_likelihoods)}, min{np.min(log_likelihoods)}, mean:{np.mean(log_likelihoods)}")
-        print(log_likelihoods)
+        # print(
+        #     f"loglikelihood max:{np.max(log_likelihoods)}, min{np.min(log_likelihoods)}, mean:{np.mean(log_likelihoods)}")
+        # print(log_likelihoods)
 
         max_log_likelihood = np.max(log_likelihoods)
 
         # 将对数似然转换为非归一化权重，通过减去最大值避免exp(大正数)溢出
         # np.exp(log(w_i) - log(w_max)) = w_i / w_max
         unnormalized_weights = np.exp(log_likelihoods - max_log_likelihood)
-        print(unnormalized_weights)
+        # print(f"exp unnormalized_weights:{unnormalized_weights}")
 
         return unnormalized_weights / np.sum(unnormalized_weights)
 
