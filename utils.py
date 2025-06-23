@@ -87,22 +87,25 @@ def plot_observations(ax, q: np.ndarray, o: np.ndarray, observe_cov: np.ndarray 
         q: 状态数组 (N x 4)，每行表示一个状态 [x, y, vx, vy]。
         o: 观测点数组 (M x 2)，每行表示一个观测点 [x, y]。
     """
-    x = q[:, 0]
-    y = q[:, 1]
-    ax.plot(x, y, '-', color='g', label='State Trajectory')
-    
-    ox = o[:, 0]
-    oy = o[:, 1]
 
     ball_num = o.shape[2]
-    if observe_cov is not None:
-        for k in range(ball_num):
-            for i in range(q.shape[0]):
-                plot_density_ellipse(
-                    ax, q[i, :2, k].flatten(), observe_cov[2*k:2*(k+1), 2*k:2*(k+1)], color='blue')
+    print(observe_cov.shape)
 
-    ax.scatter(ox[:, 0], oy[:, 1], s=15, color='r',
-               alpha=0.5, label='Observations')
+    for i in range(ball_num):
+        x = q[:, 0, i]
+        y = q[:, 1, i]
+        ax.plot(x, y, '-', color='g', label='State Trajectory')
+
+        ox = o[:, 0, i]
+        oy = o[:, 1, i]
+
+        if observe_cov is not None:
+            for j in range(q.shape[0]):
+                plot_density_ellipse(
+                    ax, [x[j], y[j]], observe_cov[2*i:2*(i+1), 2*i:2*(i+1)], color='blue')
+
+        ax.scatter(ox, oy, s=15, color='r',
+                   alpha=0.5, label='Observations')
 
     ax.set_xlabel('X Position')
     ax.set_ylabel('Y Position')

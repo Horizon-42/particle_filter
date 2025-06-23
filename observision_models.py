@@ -14,7 +14,7 @@ class BallObservation:
 
 
 class NormalObservation(BallObservation):
-    def __init__(self, ball_num: int, var_scale: float = 1000):
+    def __init__(self, ball_num: int, var_scale: float = 10):
         super().__init__()
 
         self.d_observe = ball_num*2
@@ -28,8 +28,7 @@ class NormalObservation(BallObservation):
         ball_num = state.shape[-1]
         noise = self.noise_distribution.rvs(size=particle_num)
         print(f"noise shape:{noise.shape}")
-        return super().observe(state)
-        # + noise.reshape(particle_num, 2, ball_num)
+        return super().observe(state) + noise.reshape(particle_num, 2, ball_num)
 
     def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
         """
@@ -109,7 +108,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     ball_num = 3
-    state = np.random.rand(3, 4, ball_num)*100
+    state = np.random.rand(10, 4, ball_num)*100
 
     ideal_observ = BallObservation()
 
@@ -123,6 +122,7 @@ if __name__ == "__main__":
     # print(state)
     observe_model = NormalObservation(ball_num)
     noisy_observe = observe_model.observe(state)
+    print(state.shape, noisy_observe.shape)
     print(f"Noise observe:\n {noisy_observe}")
 
     print(f"Diff: {np.mean((ideal_obs-noisy_observe)**2)}")
@@ -132,11 +132,11 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(figsize=(12, 12))
 
-    plot_observations(ax, state[:, :, 0],
-                      noisy_observe[:, :, 0], observe_model.R[:2, :2])
+    plot_observations(ax, state,
+                      noisy_observe, observe_model.R)
 
-    plot_observations(ax, state[:, :, 1],
-                      noisy_observe[:, :, 1], observe_model.R[2:4, 2:4])
+    # plot_observations(ax, state[:, :, 1],
+    #                   noisy_observe[:, :, 1], observe_model.R[2:4, 2:4])
 
     # plot_observations(ax, state[:, :, 2],
     #                   noisy_observe[:, :, 2], observe_model.R[4:6, 4:6])
