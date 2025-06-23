@@ -12,7 +12,7 @@ class BallThrowingSimulator:
     The observation noise is assumed to be Gaussian.
     """
 
-    def __init__(self, delta_t=0.5, init_state=None, ball_num=1):
+    def __init__(self, delta_t=0.5, init_state=None, ball_num=1, observ_model: NormalObservation = None):
         self.delta_t = delta_t
         self.ball_num = ball_num
         self.init_state = init_state if init_state is not None else np.random.rand(
@@ -20,7 +20,8 @@ class BallThrowingSimulator:
         print(self.init_state.shape)
 
         self.trans_model = BallTransition(delta_t)
-        self.observe_model = NormalObservation(ball_num)
+        self.observe_model = NormalObservation(
+            ball_num) if observ_model is None else observ_model
 
     def step(self, state):
         """
@@ -44,19 +45,19 @@ class BallThrowingSimulator:
         :param time: The amount of time to simulate.
         :return: A list of states and observations for each step.
         """
-        states = []
-        observations = []
         steps = int(time / self.delta_t)
         if steps <= 0:
             raise ValueError("Time must be greater than zero to simulate motion.")
         state = self.init_state.copy()
-        states.append(state)
+        states = [state]
         # initial state have no observation
         for _ in range(steps):
             state = self.step(state)
             # if state[1]< 0: # touch the ground
             #     break
             states.append(state)
-            observations.append(self.observe(state))
 
-        return np.array(states), np.array(observations)
+        states = np.array(states)
+        observations = self.observe_model.observe(states[1:])
+
+        return states, observations
