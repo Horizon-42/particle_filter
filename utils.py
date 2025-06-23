@@ -163,15 +163,18 @@ def plot_particles(ax, particles: np.ndarray, weights: np.ndarray, colormap='vir
         weights: 粒子的权重数组 (N, )。
         colormap: 使用的颜色映射名称。
     """
-    x, y = particles[:, 0], particles[:, 1]
-    vx, vy = particles[:, 2], particles[:, 3]
+
+    ball_num = particles.shape[2]
+
     # map weights to colors, 0 to 1
     color = plt.cm.get_cmap(colormap)(weights)
 
-    ball_num = particles.shape[2]
-    for k in range(ball_num):
-        ax.scatter(x[:, k], y[:, k], color=color, alpha=0.5, s=1)
-        ax.quiver(x[:, k], y[:, k], vx[:, k], vy[:, k], angles='xy', scale_units='xy',
+    for i in range(ball_num):
+        x, y = particles[:, 0, i], particles[:, 1, i]
+        vx, vy = particles[:, 2, i], particles[:, 3, i]
+
+        ax.scatter(x, y, color=color, alpha=0.5, s=1)
+        ax.quiver(x, y, vx, vy, angles='xy', scale_units='xy',
                   scale=3, color=color, alpha=0.5)
     # draw indicator for colormap
     sm = plt.cm.ScalarMappable(

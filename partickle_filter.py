@@ -8,13 +8,13 @@ class ParticleFilter:
     Condensation Algorithm 
     """
 
-    def __init__(self, delta_t: float, particle_num: int, ball_num: int):
+    def __init__(self, delta_t: float, particle_num: int, ball_num: int, observ_model: NormalObservation = None):
         self.N = particle_num
 
         # init transition model and observation model
         self.trans_model: NormalTransition = NormalTransition(delta_t=delta_t)
         self.observe_model: NormalObservation = NormalObservation(
-            ball_num=ball_num)
+            ball_num=ball_num) if observ_model is None else observ_model
 
         self.init_particles = np.zeros((particle_num, 4, ball_num))
         for i in range(ball_num):
