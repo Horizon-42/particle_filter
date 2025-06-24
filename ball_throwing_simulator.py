@@ -20,11 +20,11 @@ class BallThrowingSimulator:
         # self.init_state[:, 1] *= np.array([[500], [500], [200], [200]])
         print(self.init_state.shape)
 
-        self.trans_model = BallTransition(delta_t)
+        self.trans_model = NormalTransition(delta_t)
         self.observe_model = NormalObservation(
             ball_num) if observ_model is None else observ_model
 
-    def step(self, state):
+    def step(self, state: np.ndarray):
         """
         Simulate one step of the ball's motion.
         :param state: The current state of the ball [x, y, vx, vy].
