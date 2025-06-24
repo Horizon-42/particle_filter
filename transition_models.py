@@ -34,6 +34,7 @@ class NormalTransition(BallTransition):
         super().__init__(delta_t)
         # sigma for normal noise
         # Q = random_diagonal_cov(4, 1000)
+        # use indenpendt noise
         self.Q = np.array([
             [1000, 0, 0, 0],
             [0, 1000, 0, 0],
