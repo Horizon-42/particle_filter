@@ -1,5 +1,5 @@
 import numpy as np
-from transition_models import NormalTransition
+from transition_models import BallTransition, NormalTransition, UniformTransition
 from observision_models import NormalObservation
 from math_utils import random_cov, random_diagonal_cov, sample_points_in_circle
 
@@ -12,8 +12,8 @@ class ParticleFilter:
         self.N = particle_num
 
         # init transition model and observation model
-        self.trans_model: NormalTransition = NormalTransition(delta_t=delta_t)
-        self.observe_model: NormalObservation = NormalObservation(
+        self.trans_model: BallTransition = UniformTransition(delta_t=delta_t)
+        self.observe_model: UniformTransition = NormalObservation(
             ball_num=ball_num) if observ_model is None else observ_model
 
         self.init_particles = np.zeros((particle_num, 4, ball_num))

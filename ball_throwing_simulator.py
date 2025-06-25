@@ -1,6 +1,6 @@
 # simulate motion and observation
 import numpy as np
-from transition_models import NormalTransition, BallTransition
+from transition_models import NormalTransition, BallTransition, UniformTransition
 from observision_models import NormalObservation
 class BallThrowingSimulator:
     """

@@ -1,5 +1,5 @@
 import numpy as np
-from math_utils import random_diagonal_cov
+from math_utils import random_diagonal_cov, sample_points_in_circle
 
 
 class BallTransition:
@@ -21,8 +21,8 @@ class BallTransition:
 
         self.action = np.array([0, -10, 0]).reshape((3, 1))
 
-    def propagate(self, state: np.ndarray):
-        return self.A @ state + self.B @ self.action
+    def propagate(self, states: np.ndarray):
+        return self.A @ states + self.B @ self.action
 
 
 class NormalTransition(BallTransition):
@@ -33,30 +33,49 @@ class NormalTransition(BallTransition):
     def __init__(self, delta_t):
         super().__init__(delta_t)
         # sigma for normal noise
-        # Q = random_diagonal_cov(4, 1000)
-        # use indenpendt noise
-        self.Q = np.array([
-            [1000, 0, 0, 0],
-            [0, 1000, 0, 0],
-            [0, 0, 1000, 0],
-            [0, 0, 0, 1000],
-        ], dtype=float)
+        self.Q = random_diagonal_cov(4, 500)
 
-    def propagate(self, state: np.ndarray):
-        # wrong approach, reapte one noise
-        # return cls.propagate(state) + np.random.multivariate_normal([0]*4, cls.Q).reshape(-1, 1)
-        N_particles = state.shape[0]
-        D_state = state.shape[1]
-        N_ball = state.shape[2]
+    def propagate(self, states: np.ndarray):
+        N_particles = states.shape[0]
+        D_state = states.shape[1]
+        N_ball = states.shape[2]
 
         noises = np.random.multivariate_normal(
             np.zeros(D_state), self.Q, size=N_particles*N_ball).reshape(N_particles, D_state, N_ball)
-        return super().propagate(state) + noises
+        return super().propagate(states) + noises
+
+
+class UniformTransition(BallTransition):
+    def __init__(self, delta_t):
+        super().__init__(delta_t)
+
+        # position R
+        self.position_R = 100
+
+        # speed R
+        self.speed_R = 50
+
+    def propagate(self, states: np.ndarray):
+        N_particles = states.shape[0]
+        D_state = states.shape[1]
+        N_ball = states.shape[2]
+
+        pos_noise = sample_points_in_circle(
+            (0, 0), self.position_R, N_particles*N_ball).reshape(N_particles, 2, N_ball)
+        # pos_noise = np.zeros(shape=(N_particles, 2, N_ball))
+        speed_noise = sample_points_in_circle(
+            (0, 0), self.speed_R, N_particles*N_ball).reshape(N_particles, 2, N_ball)
+        return super().propagate(states) + np.concatenate([pos_noise, speed_noise], axis=1)
+
+
 
 
 if __name__ == "__main__":
-    states = np.random.rand(10, 4, 2)*100
-    transed = BallTransition(0.5).propagate(states)
-    print(transed.shape)
-    noise_transed = NormalTransition(0.5).propagate(states)
-    print(np.mean(noise_transed**2-transed**2))
+    states = np.random.rand(5, 4, 3)*100
+    real_trans = BallTransition(0.5)
+    transed_states = real_trans.propagate(states)
+    # print(transed_states)
+    # print(transed_states.shape)
+
+    uniform_noise_trans = UniformTransition(0.5)
+    noised_states = uniform_noise_trans.propagate(states)
