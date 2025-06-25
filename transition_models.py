@@ -47,14 +47,10 @@ class NormalTransition(BallTransition):
         # return cls.propagate(state) + np.random.multivariate_normal([0]*4, cls.Q).reshape(-1, 1)
         N_particles = state.shape[0]
         D_state = state.shape[1]
-        Ball_num = state.shape[2]
+        N_ball = state.shape[2]
 
-        noises = np.zeros_like(state)
-        for i in range(Ball_num):
-            dn = np.random.multivariate_normal(
-                np.zeros(D_state), self.Q, size=N_particles)
-            print(f"Noise for d's shape:{dn.shape}")
-            noises[:, :, i] = dn
+        noises = np.random.multivariate_normal(
+            np.zeros(D_state), self.Q, size=N_particles*N_ball).reshape(N_particles, D_state, N_ball)
         return super().propagate(state) + noises
 
 
