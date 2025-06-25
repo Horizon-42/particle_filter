@@ -89,7 +89,7 @@ def plot_observations(ax, q: np.ndarray, o: np.ndarray, observe_cov: np.ndarray 
     """
 
     ball_num = o.shape[2]
-    print(observe_cov.shape)
+    # print(observe_cov.shape)
 
     for i in range(ball_num):
         x = q[:, 0, i]

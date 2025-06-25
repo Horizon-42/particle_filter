@@ -1,6 +1,6 @@
 import numpy as np
 from transition_models import BallTransition, NormalTransition, UniformTransition
-from observision_models import NormalObservation
+from observision_models import NormalObservation, BallObservation, StudentTObservation
 from math_utils import random_cov, random_diagonal_cov, sample_points_in_circle
 
 class ParticleFilter:
@@ -8,12 +8,12 @@ class ParticleFilter:
     Condensation Algorithm 
     """
 
-    def __init__(self, delta_t: float, particle_num: int, ball_num: int, observ_model: NormalObservation = None):
+    def __init__(self, delta_t: float, particle_num: int, ball_num: int, observ_model: BallObservation = None):
         self.N = particle_num
 
         # init transition model and observation model
         self.trans_model: BallTransition = UniformTransition(delta_t=delta_t)
-        self.observe_model: UniformTransition = NormalObservation(
+        self.observe_model: BallObservation = NormalObservation(
             ball_num=ball_num) if observ_model is None else observ_model
 
         self.init_particles = np.zeros((particle_num, 4, ball_num))
