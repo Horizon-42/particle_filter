@@ -19,12 +19,12 @@ class ParticleFilter:
         self.init_particles = np.zeros((particle_num, 4, ball_num))
         for i in range(ball_num):
             # use gaussian to init particles
-            x = np.random.uniform(-200, 200)
-            y = np.random.uniform(-200, 200)
-            vx = np.random.uniform(-200, 200)
-            vy = np.random.uniform(-200, 200)
+            x = np.random.uniform(0, 2000)
+            y = np.random.uniform(0, 2000)
+            vx = np.random.uniform(0, 300)
+            vy = np.random.uniform(0, 300)
 
-            xys = sample_points_in_circle((x, y), 2000, self.N)
+            xys = sample_points_in_circle((x, y), 5000, self.N)
             vs = sample_points_in_circle((vx, vy), 500, self.N)
 
             self.init_particles[:, :, i] = np.concatenate(

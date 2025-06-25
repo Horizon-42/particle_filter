@@ -16,7 +16,7 @@ class BallThrowingSimulator:
         self.delta_t = delta_t
         self.ball_num = ball_num
         self.init_state = init_state if init_state is not None else np.random.rand(
-            4, ball_num)*np.array([[1000], [1000], [400], [400]])
+            4, ball_num)*np.array([[5000], [5000], [400], [400]])
         # self.init_state[:, 1] *= np.array([[500], [500], [200], [200]])
         print(self.init_state.shape)
 

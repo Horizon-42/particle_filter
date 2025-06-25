@@ -53,7 +53,7 @@ class UniformTransition(BallTransition):
         self.position_R = 100
 
         # speed R
-        self.speed_R = 50
+        self.speed_R = 100
 
     def propagate(self, states: np.ndarray):
         N_particles = states.shape[0]
