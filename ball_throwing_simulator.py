@@ -16,11 +16,11 @@ class BallThrowingSimulator:
         self.delta_t = delta_t
         self.ball_num = ball_num
         self.init_state = init_state if init_state is not None else np.random.rand(
-            4, ball_num)*np.array([[1000], [1000], [200], [200]])
+            4, ball_num)*np.array([[1000], [1000], [400], [400]])
         # self.init_state[:, 1] *= np.array([[500], [500], [200], [200]])
         print(self.init_state.shape)
 
-        self.trans_model = NormalTransition(delta_t)
+        self.trans_model = BallTransition(delta_t)
         self.observe_model = NormalObservation(
             ball_num) if observ_model is None else observ_model
 
@@ -49,16 +49,12 @@ class BallThrowingSimulator:
         steps = int(time / self.delta_t)
         if steps <= 0:
             raise ValueError("Time must be greater than zero to simulate motion.")
-        state = self.init_state.copy()
-        states = [state]
+        states = np.zeros((steps+1, 4, self.ball_num))
+        states[0, :, :] = self.init_state
         # initial state have no observation
-        for _ in range(steps):
-            state = self.step(state)
-            # if state[1]< 0: # touch the ground
-            #     break
-            states.append(state)
+        for i in range(steps):
+            states[i+1, :, :] = self.step(states[i:i+1, :, :])
 
-        states = np.array(states)
         observations = self.observe_model.observe(states[1:])
 
         return states, observations

@@ -42,7 +42,7 @@ class NormalTransition(BallTransition):
             [0, 0, 0, 1000],
         ], dtype=float)
 
-    def propagate(cls, state: np.ndarray):
+    def propagate(self, state: np.ndarray):
         # wrong approach, reapte one noise
         # return cls.propagate(state) + np.random.multivariate_normal([0]*4, cls.Q).reshape(-1, 1)
         N_particles = state.shape[0]
@@ -52,9 +52,9 @@ class NormalTransition(BallTransition):
         noises = np.zeros_like(state)
         for i in range(Ball_num):
             dn = np.random.multivariate_normal(
-                np.zeros(D_state), cls.Q, size=N_particles)
+                np.zeros(D_state), self.Q, size=N_particles)
+            print(f"Noise for d's shape:{dn.shape}")
             noises[:, :, i] = dn
-        print(noises.shape)
         return super().propagate(state) + noises
 
 

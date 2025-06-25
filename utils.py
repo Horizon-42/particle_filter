@@ -102,7 +102,7 @@ def plot_observations(ax, q: np.ndarray, o: np.ndarray, observe_cov: np.ndarray 
         if observe_cov is not None:
             for j in range(q.shape[0]):
                 plot_density_ellipse(
-                    ax, [x[j], y[j]], observe_cov[2*i:2*(i+1), 2*i:2*(i+1)], color='blue')
+                    ax, [x[j], y[j]], observe_cov, color='blue')
 
         ax.scatter(ox, oy, s=15, color='r',
                    alpha=0.5, label='Observations')

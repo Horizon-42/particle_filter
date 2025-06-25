@@ -19,10 +19,10 @@ class ParticleFilter:
         self.init_particles = np.zeros((particle_num, 4, ball_num))
         for i in range(ball_num):
             # use gaussian to init particles
-            x = np.random.uniform(-100, 100)
-            y = np.random.uniform(0, 200)
-            vx = np.random.uniform(-50, 50)
-            vy = np.random.uniform(-50, 50)
+            x = np.random.uniform(-200, 200)
+            y = np.random.uniform(-200, 200)
+            vx = np.random.uniform(-200, 200)
+            vy = np.random.uniform(-200, 200)
 
             xys = sample_points_in_circle((x, y), 2000, self.N)
             vs = sample_points_in_circle((vx, vy), 500, self.N)
@@ -67,7 +67,7 @@ class ParticleFilter:
         new_particles = self.trans_model.propagate(new_particles)
         # print(new_particles[:10])
 
-        new_weights = self.observe_model.log_evaluation(
+        new_weights = self.observe_model.evaluation(
             observation, new_particles)
 
         return new_particles, new_weights
