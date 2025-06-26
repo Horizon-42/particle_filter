@@ -107,7 +107,7 @@ class StudentTObservation(BallObservation):
         expected_observations = super().observe(states).reshape(N, -1, order='F')
         log_likelihoods = t.logpdf(
             expected_observations, df=self.v, scale=self.scale, loc=observs)
-        log_likelihoods = np.sum(log_likelihoods, axis=1)
+        log_likelihoods = np.mean(log_likelihoods, axis=1)
 
         max_log_likelihood = np.max(log_likelihoods)
 

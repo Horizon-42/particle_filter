@@ -1,6 +1,6 @@
 import numpy as np
 from math_utils import random_diagonal_cov, sample_points_in_circle
-
+from scipy.stats import t
 
 class BallTransition:
     """
@@ -33,7 +33,7 @@ class NormalTransition(BallTransition):
     def __init__(self, delta_t):
         super().__init__(delta_t)
         # sigma for normal noise
-        self.Q = random_diagonal_cov(4, 500)
+        self.Q = random_diagonal_cov(4, 2000)
 
     def propagate(self, states: np.ndarray):
         N_particles = states.shape[0]
@@ -50,10 +50,10 @@ class UniformTransition(BallTransition):
         super().__init__(delta_t)
 
         # position R
-        self.position_R = 100
+        self.position_R = 50
 
         # speed R
-        self.speed_R = 100
+        self.speed_R = 30
 
     def propagate(self, states: np.ndarray):
         N_particles = states.shape[0]
@@ -68,6 +68,19 @@ class UniformTransition(BallTransition):
         return super().propagate(states) + np.concatenate([pos_noise, speed_noise], axis=1)
 
 
+class StudentTTransition(BallTransition):
+    def __init__(self, delta_t, v: float = 2, scale: float = 10):
+        super().__init__(delta_t)
+
+        self.v = v
+        self.scale = scale
+
+    def propagate(self, states: np.ndarray):
+        N_particles = states.shape[0]
+        D_state = states.shape[1]
+        N_ball = states.shape[2]
+
+        return super().propagate(states) + t.rvs(df=self.v, scale=self.scale, size=N_particles*D_state*N_ball).reshape(states.shape)
 
 
 if __name__ == "__main__":

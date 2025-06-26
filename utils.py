@@ -110,7 +110,7 @@ def plot_observations(ax, q: np.ndarray, o: np.ndarray, observe_cov: np.ndarray 
     ax.set_xlabel('X Position')
     ax.set_ylabel('Y Position')
     ax.set_title('State and Observations')
-    ax.legend()
+    # ax.legend()
     ax.grid(True)
     ax.set_aspect('equal', adjustable='box') # 保持坐标轴比例一致
 

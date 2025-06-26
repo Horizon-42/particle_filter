@@ -1,5 +1,5 @@
 import numpy as np
-from transition_models import BallTransition, NormalTransition, UniformTransition
+from transition_models import BallTransition, NormalTransition, UniformTransition, StudentTTransition
 from observision_models import NormalObservation, BallObservation, StudentTObservation
 from math_utils import random_cov, random_diagonal_cov, sample_points_in_circle
 
@@ -12,20 +12,25 @@ class ParticleFilter:
         self.N = particle_num
 
         # init transition model and observation model
+        # self.trans_model: BallTransition = NormalTransition(delta_t=delta_t)
         self.trans_model: BallTransition = UniformTransition(delta_t=delta_t)
-        self.observe_model: BallObservation = NormalObservation(
+        # self.trans_model: BallTransition = StudentTTransition(delta_t=delta_t)
+        # self.observe_model: BallObservation = NormalObservation(
+        #     ball_num=ball_num) if observ_model is None else observ_model
+        self.observe_model: BallObservation = StudentTObservation(
             ball_num=ball_num) if observ_model is None else observ_model
 
-        self.init_particles = np.zeros((particle_num, 4, ball_num))
-        for i in range(ball_num):
-            # use gaussian to init particles
-            x = np.random.uniform(0, 2000)
-            y = np.random.uniform(0, 2000)
-            vx = np.random.uniform(0, 300)
-            vy = np.random.uniform(0, 300)
+        # use gaussian to init particles
+        x = np.random.uniform(0, 4000)
+        y = np.random.uniform(0, 4000)
+        vx = np.random.uniform(0, 600)
+        vy = np.random.uniform(0, 600)
 
-            xys = sample_points_in_circle((x, y), 5000, self.N)
-            vs = sample_points_in_circle((vx, vy), 500, self.N)
+        self.init_particles = np.zeros(shape=(particle_num, 4, ball_num))
+
+        for i in range(ball_num):
+            xys = sample_points_in_circle((x, y), 10000, particle_num)
+            vs = sample_points_in_circle((vx, vy), 500, particle_num)
 
             self.init_particles[:, :, i] = np.concatenate(
                 [xys, vs], 1).reshape(particle_num, 4)
