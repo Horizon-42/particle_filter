@@ -129,7 +129,7 @@ class StudentTObservation(BallObservation):
         # assume x, y is independent, and every ball is independent
         return super().observe(state) + t.rvs(df=self.v, scale=self.scale, size=particle_num*2*self.ball_num).reshape(particle_num, 2, self.ball_num)
 
-    def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
+    def evaluation0(self, single_observe: np.ndarray, states: np.ndarray):
         N = states.shape[0]
         expected_observations = super().observe(states).reshape(N, -1, order='F')
 
@@ -147,7 +147,7 @@ class StudentTObservation(BallObservation):
 
         return unnormalized_weights / np.sum(unnormalized_weights)
 
-    def evaluation1(self, single_observe: np.ndarray, states: np.ndarray):
+    def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
         N = states.shape[0]  # 粒子数
         B = self.ball_num    # 预测小球数
         O = single_observe.shape[-1]  # 观测小球数（允许 O ≠ B）
