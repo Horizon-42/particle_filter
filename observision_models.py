@@ -3,6 +3,13 @@ from math_utils import random_diagonal_cov, multivariate_normal_pdf_vectorized, 
 from scipy.stats import multivariate_normal
 from utils import plot_observations
 from scipy.stats import t
+from itertools import permutations
+from scipy.optimize import linear_sum_assignment
+from scipy.special import logsumexp
+from scipy.spatial.distance import cdist
+
+
+# Remind: The observation model shouldn't know which observ come from which ball
 
 class BallObservation:
     def __init__(self, ball_num: int):
@@ -85,6 +92,27 @@ class NormalObservation(BallObservation):
         return unnormalized_weights / np.sum(unnormalized_weights)
 
 
+def sinkhorn_log_assignment(cost_matrix, epsilon=0.01, max_iter=100, tol=1e-3):
+    """
+    Sinkhorn-Knopp algorithm to compute soft assignment.
+    cost_matrix: shape (n, m) -- distance matrix
+    Returns: soft assignment matrix of shape (n, m)
+    """
+    n, m = cost_matrix.shape
+    K = np.exp(-cost_matrix / epsilon)  # Gibbs kernel
+    u = np.ones(n)
+    v = np.ones(m)
+
+    for _ in range(max_iter):
+        u_prev = u.copy()
+        u = 1.0 / (K @ v)
+        v = 1.0 / (K.T @ u)
+        if np.linalg.norm(u - u_prev, 1) < tol:
+            break
+
+    # Final transport matrix (soft-assignment)
+    P = np.diag(u) @ K @ np.diag(v)
+    return P
 class StudentTObservation(BallObservation):
     """
     Student's t-distribution
@@ -102,11 +130,12 @@ class StudentTObservation(BallObservation):
         return super().observe(state) + t.rvs(df=self.v, scale=self.scale, size=particle_num*2*self.ball_num).reshape(particle_num, 2, self.ball_num)
 
     def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
-        observs = single_observe.reshape(-1, order='F')
         N = states.shape[0]
         expected_observations = super().observe(states).reshape(N, -1, order='F')
+
+        observs = single_observe.reshape(-1, order='F')
         log_likelihoods = t.logpdf(
-            expected_observations, df=self.v, scale=self.scale, loc=observs)
+            observs, df=self.v, scale=self.scale, loc=expected_observations)
         log_likelihoods = np.mean(log_likelihoods, axis=1)
 
         max_log_likelihood = np.max(log_likelihoods)
@@ -118,7 +147,82 @@ class StudentTObservation(BallObservation):
 
         return unnormalized_weights / np.sum(unnormalized_weights)
 
+    def evaluation1(self, single_observe: np.ndarray, states: np.ndarray):
+        N = states.shape[0]  # 粒子数
+        B = self.ball_num    # 预测小球数
+        O = single_observe.shape[-1]  # 观测小球数（允许 O ≠ B）
 
+        # 粒子预测：形状 (N, 2, B)
+        predicted_positions = super().observe(states)
+
+        # 观测点 (2, O) → (O, 2)
+        observed_points = single_observe.T  # (O, 2)
+
+        log_likelihoods = np.zeros(N)
+
+        for obs in observed_points:
+            # obs 是形状 (2,) 的观测点
+
+            # 对每个预测点 i，计算 log P(obs | p_i) ，预测点形状: (N, 2, B)
+            pred_x = predicted_positions[:, 0, :]  # (N, B)
+            pred_y = predicted_positions[:, 1, :]  # (N, B)
+
+            logpdf_x = t.logpdf(obs[0], df=self.v,
+                                scale=self.scale, loc=pred_x)  # (N, B)
+            logpdf_y = t.logpdf(obs[1], df=self.v,
+                                scale=self.scale, loc=pred_y)  # (N, B)
+
+            logpdf = logpdf_x + logpdf_y  # (N, B)
+
+            # soft assignment: log-sum-exp over predicted balls
+            # 使用 logsumexp for numerical stability
+            log_prob = logsumexp(logpdf - np.log(B), axis=1)  # (N,)
+            log_likelihoods += log_prob
+
+        # Normalize
+        max_log_likelihood = np.max(log_likelihoods)
+        weights = np.exp(log_likelihoods - max_log_likelihood)
+        return weights / np.sum(weights)
+
+    def evaluation2(self, single_observe: np.ndarray, states: np.ndarray):
+        N_particles = states.shape[0]
+        # shape: (N, 2, ball_num_predicted)
+        predicted_positions = super().observe(states)
+
+        ball_num_observed = single_observe.shape[-1]
+        observe_points = single_observe.T  # shape: (ball_num_observed, 2)
+
+        weights = np.zeros(N_particles)
+
+        for i in range(N_particles):
+            # shape: (ball_num_predicted, 2)
+            pred_points = predicted_positions[i].T
+
+            # Compute distance matrix (observed x predicted)
+            cost_matrix = cdist(observe_points, pred_points,
+                                metric='sqeuclidean')
+
+            # Get soft assignment matrix (observed x predicted)
+            soft_assignment = sinkhorn_log_assignment(
+                cost_matrix, epsilon=0.05)
+
+            # Each (o_i, p_j) has a soft match weight soft_assignment[i, j]
+            # Now compute weighted likelihood
+            log_likelihood = 0.0
+            for obs_i in range(ball_num_observed):
+                for pred_j in range(pred_points.shape[0]):
+                    loc = pred_points[pred_j]
+                    obs = observe_points[obs_i]
+                    log_prob = t.logpdf(obs[0], df=self.v, scale=self.scale, loc=loc[0]) + \
+                        t.logpdf(obs[1], df=self.v,
+                                 scale=self.scale, loc=loc[1])
+                    log_likelihood += soft_assignment[obs_i, pred_j] * log_prob
+
+            weights[i] = log_likelihood
+
+        max_log_likelihood = np.max(weights)
+        unnormalized_weights = np.exp(weights - max_log_likelihood)
+        return unnormalized_weights / np.sum(unnormalized_weights)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

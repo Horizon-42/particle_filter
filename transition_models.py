@@ -1,6 +1,13 @@
 import numpy as np
 from math_utils import random_diagonal_cov, sample_points_in_circle
 from scipy.stats import t
+from enum import Enum
+
+
+class TransitionType(Enum):
+    Normal = 1
+    Uniform = 2
+    StudentT = 3
 
 class BallTransition:
     """
@@ -50,10 +57,10 @@ class UniformTransition(BallTransition):
         super().__init__(delta_t)
 
         # position R
-        self.position_R = 50
+        self.position_R = 60
 
         # speed R
-        self.speed_R = 30
+        self.speed_R = 50
 
     def propagate(self, states: np.ndarray):
         N_particles = states.shape[0]

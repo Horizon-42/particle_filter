@@ -1,24 +1,30 @@
 import numpy as np
-from transition_models import BallTransition, NormalTransition, UniformTransition, StudentTTransition
+from transition_models import BallTransition, NormalTransition, UniformTransition, StudentTTransition, TransitionType
 from observision_models import NormalObservation, BallObservation, StudentTObservation
 from math_utils import random_cov, random_diagonal_cov, sample_points_in_circle
+
+
 
 class ParticleFilter:
     """
     Condensation Algorithm 
     """
 
-    def __init__(self, delta_t: float, particle_num: int, ball_num: int, observ_model: BallObservation = None):
+    def __init__(self, delta_t: float, particle_num: int, ball_num: int,
+                 transition_type: TransitionType, observ_model: BallObservation):
         self.N = particle_num
 
-        # init transition model and observation model
-        # self.trans_model: BallTransition = NormalTransition(delta_t=delta_t)
-        self.trans_model: BallTransition = UniformTransition(delta_t=delta_t)
-        # self.trans_model: BallTransition = StudentTTransition(delta_t=delta_t)
-        # self.observe_model: BallObservation = NormalObservation(
-        #     ball_num=ball_num) if observ_model is None else observ_model
-        self.observe_model: BallObservation = StudentTObservation(
-            ball_num=ball_num) if observ_model is None else observ_model
+        self.trans_model: BallTransition = None
+        if transition_type == TransitionType.Normal:
+            self.trans_model = NormalTransition(delta_t=delta_t)
+        elif transition_type == TransitionType.Uniform:
+            self.trans_model = UniformTransition(delta_t=delta_t)
+        elif transition_type == TransitionType.StudentT:
+            self.trans_model = StudentTTransition(delta_t=delta_t)
+        else:
+            self.trans_model = NormalTransition(delta_t=delta_t)
+
+        self.observe_model: BallObservation = observ_model
 
         # use gaussian to init particles
         x = np.random.uniform(0, 4000)
@@ -28,12 +34,15 @@ class ParticleFilter:
 
         self.init_particles = np.zeros(shape=(particle_num, 4, ball_num))
 
-        for i in range(ball_num):
+        for i in range(0, ball_num):
+            # self.init_particles[:, :, i] = self.init_particles[:, :, 0]
             xys = sample_points_in_circle((x, y), 10000, particle_num)
             vs = sample_points_in_circle((vx, vy), 500, particle_num)
 
             self.init_particles[:, :, i] = np.concatenate(
                 [xys, vs], 1).reshape(particle_num, 4)
+
+
         self.init_weights = np.ones(self.N) / self.N  # uniform weights
 
     def systematic_resample(self, particles: np.ndarray, weights: np.ndarray):
@@ -72,7 +81,10 @@ class ParticleFilter:
         new_particles = self.trans_model.propagate(new_particles)
         # print(new_particles[:10])
 
-        new_weights = self.observe_model.evaluation(
-            observation, new_particles)
+        if observation is not None:
+            new_weights = self.observe_model.evaluation(
+                observation, new_particles)
+        else:
+            new_weights = np.ones(self.N) / self.N
 
         return new_particles, new_weights
