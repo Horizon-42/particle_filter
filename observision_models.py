@@ -176,7 +176,7 @@ class UnorderedStudentTObservation(BallObservation):
         predicted_positions = super().observe(states)
 
         # Initialize total log-likelihoods for each particle
-        total_log_likelihoods = np.ones(N_particles)
+        total_log_likelihoods = np.zeros(N_particles)
 
         # Log-prior for GMM components (assuming uniform: 1/B)
         # This will be added to each component's log-likelihood before logsumexp

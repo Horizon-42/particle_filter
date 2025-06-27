@@ -27,17 +27,17 @@ class ParticleFilter:
         self.observe_model: BallObservation = observ_model
 
         # use gaussian to init particles
-        x = np.random.uniform(0, 10000)
-        y = np.random.uniform(0, 10000)
-        vx = np.random.uniform(0, 400)
-        vy = np.random.uniform(0, 400)
+        x = np.random.uniform(-50, 50)
+        y = np.random.uniform(-50, 50)
+        vx = np.random.uniform(0, 20)
+        vy = np.random.uniform(0, 20)
 
         self.init_particles = np.zeros(shape=(particle_num, 4, ball_num))
 
         for i in range(0, ball_num):
             # self.init_particles[:, :, i] = self.init_particles[:, :, 0]
-            xys = sample_points_in_circle((x, y), 20000, particle_num)
-            vs = sample_points_in_circle((vx, vy), 200, particle_num)
+            xys = sample_points_in_circle((x, y), 100, particle_num)
+            vs = sample_points_in_circle((vx, vy), 20, particle_num)
 
             self.init_particles[:, :, i] = np.concatenate(
                 [xys, vs], 1).reshape(particle_num, 4)

@@ -6,7 +6,7 @@ class BallThrowingSimulator:
     """
     A simple ball simulator that simulates the motion of a ball under gravity.
     And generates observations based on the ball's position.
-    The state is represented as [x, y, vx, vy], where (x, y) is the position and (vx, vy) is the velocity.
+    The state is represented as [x, y, vx, vy]*n, where (x, y) is the position and (vx, vy) is the velocity.
     The action is gravity, which affects the y-velocity.
     Observations are generated as noisy measurements of the position. 
     The observation noise is assumed to be Gaussian.
@@ -15,10 +15,7 @@ class BallThrowingSimulator:
     def __init__(self, delta_t=0.5, init_state=None, ball_num=1, observ_model: NormalObservation = None):
         self.delta_t = delta_t
         self.ball_num = ball_num
-        self.init_state = init_state if init_state is not None else np.random.rand(
-            4, ball_num)*np.array([[20000], [20000], [400], [400]])
-        # self.init_state[:, 1] *= np.array([[500], [500], [200], [200]])
-        print(self.init_state.shape)
+        self.init_state = init_state
 
         self.trans_model = BallTransition(delta_t)
         self.observe_model = NormalObservation(
