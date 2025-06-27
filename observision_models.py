@@ -217,15 +217,9 @@ class UnorderedStudentTObservation(BallObservation):
                 axis=1  # Sum over predicted balls for each particle
             )
 
-            max_log_probs_for_ob = np.max(log_prob_for_obs_per_particle)
-            unnormalized_log_probs_for_ob = np.exp(
-                log_prob_for_obs_per_particle - max_log_probs_for_ob)
-            normed_log_probs_for_ob = unnormalized_log_probs_for_ob / \
-                np.sum(unnormalized_log_probs_for_ob)
-
             # Accumulate total log-likelihoods for each particle
             # Assuming observations are conditionally independent given the state
-            total_log_likelihoods += np.log(normed_log_probs_for_ob)
+            total_log_likelihoods += log_prob_for_obs_per_particle
 
         # --- Normalize Weights using Log-Space Normalization ---
         max_log_likelihood = np.max(total_log_likelihoods)
