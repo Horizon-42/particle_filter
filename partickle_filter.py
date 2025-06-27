@@ -1,6 +1,6 @@
 import numpy as np
 from transition_models import BallTransition, NormalTransition, UniformTransition, StudentTTransition, TransitionType
-from observision_models import NormalObservation, BallObservation, StudentTObservation
+from observision_models import BallObservation
 from math_utils import random_cov, random_diagonal_cov, sample_points_in_circle
 
 
@@ -27,16 +27,16 @@ class ParticleFilter:
         self.observe_model: BallObservation = observ_model
 
         # use gaussian to init particles
-        x = np.random.uniform(0, 4000)
-        y = np.random.uniform(0, 4000)
-        vx = np.random.uniform(0, 200)
-        vy = np.random.uniform(0, 200)
+        x = np.random.uniform(0, 10000)
+        y = np.random.uniform(0, 10000)
+        vx = np.random.uniform(0, 400)
+        vy = np.random.uniform(0, 400)
 
         self.init_particles = np.zeros(shape=(particle_num, 4, ball_num))
 
         for i in range(0, ball_num):
             # self.init_particles[:, :, i] = self.init_particles[:, :, 0]
-            xys = sample_points_in_circle((x, y), 10000, particle_num)
+            xys = sample_points_in_circle((x, y), 20000, particle_num)
             vs = sample_points_in_circle((vx, vy), 200, particle_num)
 
             self.init_particles[:, :, i] = np.concatenate(
