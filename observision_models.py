@@ -126,8 +126,11 @@ class OrderedStudentTObservation(BallObservation):
         observs = single_observe.reshape(-1, order='F')
         log_likelihoods = t.logpdf(
             observs, df=self.v, scale=self.scale, loc=expected_observations)
-        # TODO why mean is better? it should be sum
-        log_likelihoods = np.mean(log_likelihoods, axis=1)
+        # Summing log-likelihoods assumes independence of the components
+        # that were stacked to form the log_likelihoods array before this line.
+        # For example, if observs and expected_observations are for multiple dimensions or multiple balls,
+        # and their likelihoods are calculated independently and then stacked, summing is appropriate.
+        log_likelihoods = np.sum(log_likelihoods, axis=1)
 
         max_log_likelihood = np.max(log_likelihoods)
 
@@ -210,22 +213,17 @@ class UnorderedStudentTObservation(BallObservation):
 
             # Apply Log-Sum-Exp for soft assignment (GMM-like behavior)
             # log_prob_for_obs_per_particle shape: (N_particles,)
-            # This computes log( sum_k (phi_k * P(obs | mu_k)) ) for each particle
+            # This computes log( P(current_obs | particle_state_i) )
+            # by marginalizing over possible assignments of current_obs to predicted balls.
             log_prob_for_obs_per_particle = logsumexp(
-                # Add prior (log(1/B))
                 log_prior_component + log_likelihood_components,
                 axis=1  # Sum over predicted balls for each particle
             )
 
-            max_log_probs_for_ob = np.max(log_prob_for_obs_per_particle)
-            unnormalized_log_probs_for_ob = np.exp(
-                log_prob_for_obs_per_particle - max_log_probs_for_ob)
-            normed_log_probs_for_ob = unnormalized_log_probs_for_ob / \
-                np.sum(unnormalized_log_probs_for_ob)
-
-            # Accumulate total log-likelihoods for each particle
-            # Assuming observations are conditionally independent given the state
-            total_log_likelihoods += np.log(normed_log_probs_for_ob)
+            # Accumulate total log-likelihoods for each particle.
+            # Assuming observations are conditionally independent given the state,
+            # the total log-likelihood is the sum of individual log-likelihoods.
+            total_log_likelihoods += log_prob_for_obs_per_particle
 
         # --- Normalize Weights using Log-Space Normalization ---
         max_log_likelihood = np.max(total_log_likelihoods)
