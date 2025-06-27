@@ -10,7 +10,7 @@ class ParticleFilter:
     Condensation Algorithm 
     """
 
-    def __init__(self, delta_t: float, particle_num: int, ball_num: int,
+    def __init__(self, delta_t: float, particle_num: int,
                  transition_type: TransitionType, observ_model: BallObservation):
         self.N = particle_num
 
@@ -32,15 +32,14 @@ class ParticleFilter:
         vx = np.random.uniform(0, 200)
         vy = np.random.uniform(0, 200)
 
-        self.init_particles = np.zeros(shape=(particle_num, 4, ball_num))
+        self.init_particles = np.zeros(shape=(particle_num, 4, 1))
 
-        for i in range(0, ball_num):
-            # self.init_particles[:, :, i] = self.init_particles[:, :, 0]
-            xys = sample_points_in_circle((x, y), 10000, particle_num)
-            vs = sample_points_in_circle((vx, vy), 200, particle_num)
+        # self.init_particles[:, :, i] = self.init_particles[:, :, 0]
+        xys = sample_points_in_circle((x, y), 10000, particle_num)
+        vs = sample_points_in_circle((vx, vy), 200, particle_num)
 
-            self.init_particles[:, :, i] = np.concatenate(
-                [xys, vs], 1).reshape(particle_num, 4)
+        self.init_particles[:, :, 0] = np.concatenate(
+            [xys, vs], 1).reshape(particle_num, 4)
 
 
         self.init_weights = np.ones(self.N) / self.N  # uniform weights
@@ -91,8 +90,7 @@ class ParticleFilter:
 
         return particles[indices]  # Select particles using the found indices
 
-
-    def update(self, particles: np.ndarray, weights: np.ndarray, observation: np.ndarray):
+    def predict(self, particles: np.ndarray, weights: np.ndarray,):
         print(f"Neff:{1/np.sum(weights**2)}")
         print(
             f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
@@ -101,12 +99,21 @@ class ParticleFilter:
 
         # propagate the particles
         new_particles = self.trans_model.propagate(new_particles)
-        # print(new_particles[:10])
+        return new_particles
 
+    def update(self, predicted_particles: np.ndarray, weights: np.ndarray, observation: np.ndarray):
         if observation is not None:
             new_weights = self.observe_model.evaluation(
-                observation, new_particles)
+                observation, predicted_particles)
         else:
             new_weights = np.ones(self.N) / self.N
 
-        return new_particles, new_weights
+        return new_weights
+
+
+def JPDA(multi_predicted_particles: list[np.ndarray], observations: np.ndarray):
+    """
+    multi_predicted_particles: [(N_particles, 4, 1)]*N_ball
+    observations: (2, N_ball)
+    """
+    pass
