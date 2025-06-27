@@ -57,7 +57,7 @@ class UniformTransition(BallTransition):
         super().__init__(delta_t)
 
         # position R
-        self.position_R = 60
+        self.position_R = 100
 
         # speed R
         self.speed_R = 50

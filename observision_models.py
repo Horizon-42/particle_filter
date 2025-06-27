@@ -92,28 +92,7 @@ class NormalObservation(BallObservation):
         return unnormalized_weights / np.sum(unnormalized_weights)
 
 
-def sinkhorn_log_assignment(cost_matrix, epsilon=0.01, max_iter=100, tol=1e-3):
-    """
-    Sinkhorn-Knopp algorithm to compute soft assignment.
-    cost_matrix: shape (n, m) -- distance matrix
-    Returns: soft assignment matrix of shape (n, m)
-    """
-    n, m = cost_matrix.shape
-    K = np.exp(-cost_matrix / epsilon)  # Gibbs kernel
-    u = np.ones(n)
-    v = np.ones(m)
-
-    for _ in range(max_iter):
-        u_prev = u.copy()
-        u = 1.0 / (K @ v)
-        v = 1.0 / (K.T @ u)
-        if np.linalg.norm(u - u_prev, 1) < tol:
-            break
-
-    # Final transport matrix (soft-assignment)
-    P = np.diag(u) @ K @ np.diag(v)
-    return P
-class StudentTObservation(BallObservation):
+class OrderedStudentTObservation(BallObservation):
     """
     Student's t-distribution
     """
@@ -129,13 +108,14 @@ class StudentTObservation(BallObservation):
         # assume x, y is independent, and every ball is independent
         return super().observe(state) + t.rvs(df=self.v, scale=self.scale, size=particle_num*2*self.ball_num).reshape(particle_num, 2, self.ball_num)
 
-    def evaluation0(self, single_observe: np.ndarray, states: np.ndarray):
+    def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
         N = states.shape[0]
         expected_observations = super().observe(states).reshape(N, -1, order='F')
 
         observs = single_observe.reshape(-1, order='F')
         log_likelihoods = t.logpdf(
             observs, df=self.v, scale=self.scale, loc=expected_observations)
+        # TODO why mean is better?
         log_likelihoods = np.mean(log_likelihoods, axis=1)
 
         max_log_likelihood = np.max(log_likelihoods)
@@ -147,7 +127,7 @@ class StudentTObservation(BallObservation):
 
         return unnormalized_weights / np.sum(unnormalized_weights)
 
-    def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
+    def evaluation1(self, single_observe: np.ndarray, states: np.ndarray):
         N = states.shape[0]  # 粒子数
         B = self.ball_num    # 预测小球数
         O = single_observe.shape[-1]  # 观测小球数（允许 O ≠ B）
@@ -184,45 +164,327 @@ class StudentTObservation(BallObservation):
         weights = np.exp(log_likelihoods - max_log_likelihood)
         return weights / np.sum(weights)
 
-    def evaluation2(self, single_observe: np.ndarray, states: np.ndarray):
-        N_particles = states.shape[0]
-        # shape: (N, 2, ball_num_predicted)
+
+class UnorderedStudentTObservation(BallObservation):
+    """
+    Student's t-distribution based observation model for unordered observations.
+    Assumes independent noise in x and y dimensions.
+    """
+
+    def __init__(self, ball_num: int, v: float = 0.5, scale: float = 10):
+        super().__init__(ball_num)
+        # Degrees of freedom (v or df). Lower v means fatter tails (more robust to outliers).
+        self.v = v
+        # Scale parameter. For a 2D independent model, this acts like std dev.
+        self.scale = scale
+
+        # For noise generation, we need to consider 2 dimensions.
+        # rvs for a scalar df and scale means it samples from 1D t-dist.
+        # We assume independent samples for x and y.
+        # It's not a true multivariate t-distribution object, just for rvs convenience.
+
+    def observe(self, state: np.ndarray):
+        particle_num = state.shape[0]
+        # Generate independent t-distributed noise for x and y for each ball and particle
+        # size=particle_num * 2 * self.ball_num ensures enough samples for all (particle, dim, ball)
+        noise = t.rvs(df=self.v, scale=self.scale,
+                      size=particle_num * 2 * self.ball_num).reshape(particle_num, 2, self.ball_num)
+        return super().observe(state) + noise
+
+    def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
+        N_particles = states.shape[0]  # N
+        N_predicted_balls = self.ball_num    # B
+        # O (can be different from B)
+        N_observed_points = single_observe.shape[-1]
+
+        # Particle predictions: shape (N_particles, 2, N_predicted_balls)
         predicted_positions = super().observe(states)
 
-        ball_num_observed = single_observe.shape[-1]
-        observe_points = single_observe.T  # shape: (ball_num_observed, 2)
+        # Observed points: (2, N_observed_points) -> Transpose to (N_observed_points, 2)
+        observed_points = single_observe.T  # (O, 2)
 
-        weights = np.zeros(N_particles)
+        # Initialize total log-likelihoods for each particle
+        total_log_likelihoods = np.zeros(N_particles)
 
-        for i in range(N_particles):
-            # shape: (ball_num_predicted, 2)
-            pred_points = predicted_positions[i].T
+        # Log-prior for GMM components (assuming uniform: 1/B)
+        # This will be added to each component's log-likelihood before logsumexp
+        log_prior_component = -np.log(N_predicted_balls)
 
-            # Compute distance matrix (observed x predicted)
-            cost_matrix = cdist(observe_points, pred_points,
-                                metric='sqeuclidean')
+        # Iterate through each actual observed point
+        for obs_idx in range(N_observed_points):
+            current_obs = observed_points[obs_idx, :]  # Shape: (2,)
 
-            # Get soft assignment matrix (observed x predicted)
-            soft_assignment = sinkhorn_log_assignment(
-                cost_matrix, epsilon=0.05)
+            # For each particle and each predicted ball, calculate the log-likelihood
+            # log_likelihood_components shape: (N_particles, N_predicted_balls)
+            # This will store log P(current_obs | predicted_ball_k_for_particle_i)
 
-            # Each (o_i, p_j) has a soft match weight soft_assignment[i, j]
-            # Now compute weighted likelihood
-            log_likelihood = 0.0
-            for obs_i in range(ball_num_observed):
-                for pred_j in range(pred_points.shape[0]):
-                    loc = pred_points[pred_j]
-                    obs = observe_points[obs_i]
-                    log_prob = t.logpdf(obs[0], df=self.v, scale=self.scale, loc=loc[0]) + \
-                        t.logpdf(obs[1], df=self.v,
-                                 scale=self.scale, loc=loc[1])
-                    log_likelihood += soft_assignment[obs_i, pred_j] * log_prob
+            # Extract x and y components of predicted positions
+            # pred_x_coords shape: (N_particles, N_predicted_balls)
+            pred_x_coords = predicted_positions[:, 0, :]
+            pred_y_coords = predicted_positions[:, 1, :]
 
-            weights[i] = log_likelihood
+            # Calculate log-PDF for x and y dimensions independently
+            # logpdf_x_comp shape: (N_particles, N_predicted_balls)
+            logpdf_x_comp = t.logpdf(
+                current_obs[0], df=self.v, scale=self.scale, loc=pred_x_coords)
+            # logpdf_y_comp shape: (N_particles, N_predicted_balls)
+            logpdf_y_comp = t.logpdf(
+                current_obs[1], df=self.v, scale=self.scale, loc=pred_y_coords)
 
-        max_log_likelihood = np.max(weights)
-        unnormalized_weights = np.exp(weights - max_log_likelihood)
-        return unnormalized_weights / np.sum(unnormalized_weights)
+            # Combine x and y log-PDFs to get the 2D joint log-PDF for each component
+            # (Assuming independence of x and y dimensions, which is implied by your scale usage)
+            log_likelihood_components = logpdf_x_comp + \
+                logpdf_y_comp  # (N_particles, N_predicted_balls)
+
+            # Apply Log-Sum-Exp for soft assignment (GMM-like behavior)
+            # log_prob_for_obs_per_particle shape: (N_particles,)
+            # This computes log( sum_k (phi_k * P(obs | mu_k)) ) for each particle
+            log_prob_for_obs_per_particle = logsumexp(
+                # Add prior (log(1/B))
+                log_prior_component + log_likelihood_components,
+                axis=1  # Sum over predicted balls for each particle
+            )
+
+            # Accumulate total log-likelihoods for each particle
+            # Assuming observations are conditionally independent given the state
+            total_log_likelihoods += log_prob_for_obs_per_particle
+
+        # --- Normalize Weights using Log-Space Normalization ---
+        max_log_likelihood = np.max(total_log_likelihoods)
+
+        # Handle cases where all log-likelihoods are effectively negative infinity
+        if np.isneginf(max_log_likelihood):
+            # Default to uniform weights
+            return np.ones(N_particles) / N_particles
+
+        # Compute unnormalized weights: exp(log(w_i) - log(w_max)) = w_i / w_max
+        unnormalized_weights = np.exp(
+            total_log_likelihoods - max_log_likelihood)
+
+        # Normalize the weights so they sum to 1
+        sum_unnormalized_weights = np.sum(unnormalized_weights)
+        if sum_unnormalized_weights == 0:
+            # If all unnormalized weights are 0 (e.g., due to extreme underflow),
+            # return uniform weights to prevent filter collapse.
+            return np.ones(N_particles) / N_particles
+        else:
+            normalized_weights = unnormalized_weights / sum_unnormalized_weights
+
+        return normalized_weights
+
+
+class GMMObservation(BallObservation):
+    def __init__(self, ball_num, var_scale: float = 10):
+        super().__init__(ball_num)
+        self.R = np.eye(2)
+        np.fill_diagonal(self.R, var_scale)
+
+        self.R_inv = np.linalg.inv(self.R)
+
+        self.noise_distribution = multivariate_normal(
+            np.zeros(2), self.R)
+
+    def observe(self, state: np.ndarray):
+        particle_num = state.shape[0]
+        noise = self.noise_distribution.rvs(size=particle_num*self.ball_num)
+        return super().observe(state) + noise.reshape(particle_num, 2, self.ball_num)
+
+    def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
+        N_particles = states.shape[0]  # Number of particles
+
+        # predicted_positions shape: (N_particles, 2, ball_num)
+        predicted_positions = super().observe(states)
+
+        # single_observe shape: (2, ball_num_observed)
+        # Transpose to (ball_num_observed, 2) for easier iteration over observations
+        single_observe_T = single_observe.T  # shape: (ball_num_observed, 2)
+        # Actual number of observed points
+        ball_num_observed = single_observe_T.shape[0]
+
+        # Initialize total log-likelihoods for each particle
+        # These will be accumulated for each observed point
+        total_log_likelihoods = np.zeros(N_particles)
+
+        # GMM component weights (phi_k). Assuming equal weights for each predicted ball.
+        # This is the prior probability of an observation coming from a specific ball.
+        log_phi = np.log(1.0 / self.ball_num)
+
+        # Iterate through each actual observed point (o_x, o_y)
+        for obs_idx in range(ball_num_observed):
+            current_obs = single_observe_T[obs_idx, :]  # Shape: (2,)
+
+            # component_log_likelihoods will store the log-likelihood of current_obs
+            # given each predicted ball's position, for all particles.
+            # Shape: (N_particles, self.ball_num)
+            component_log_likelihoods = np.zeros((N_particles, self.ball_num))
+
+            for ball_idx in range(self.ball_num):
+                # predicted_pos_for_ball_idx shape: (N_particles, 2)
+                # These are the means (mu_k) for the GMM components for each particle.
+                predicted_pos_for_ball_idx = predicted_positions[:, :, ball_idx]
+
+                logpdf = multivariate_normal_logpdf_vectorized(current_obs.flatten(),
+                                                               means=predicted_pos_for_ball_idx,
+                                                               cov=self.R)
+                component_log_likelihoods[:, ball_idx] = logpdf
+
+            # -------------------------------------------------------------
+            # Apply the Log-Sum-Exp trick to calculate log(sum_k (phi_k * N_k)) for each particle.
+            # This accounts for the uncertainty of which predicted ball corresponds to current_obs.
+
+            # Add log(phi_k) to each component's log-likelihood
+            # log_terms shape: (N_particles, self.ball_num)
+            log_terms = log_phi + component_log_likelihoods
+
+            # Find the maximum log-likelihood term for each particle across its predicted balls.
+            # This is crucial for numerical stability.
+            max_log_term = np.max(log_terms, axis=1)  # Shape: (N_particles,)
+
+            # Calculate exp(log_terms - max_log_term).
+            # np.newaxis ensures correct broadcasting for element-wise subtraction.
+            exp_diff = np.exp(log_terms - max_log_term[:, np.newaxis])
+
+            # Sum the exponential terms for each particle.
+            sum_exp_diff = np.sum(exp_diff, axis=1)  # Shape: (N_particles,)
+
+            # Handle potential numerical underflow where sum_exp_diff becomes zero.
+            # Replacing 0 with a tiny float epsilon prevents log(0)
+            sum_exp_diff[sum_exp_diff == 0] = np.finfo(float).eps
+
+            # Complete the Log-Sum-Exp calculation.
+            # This results in log(p(current_obs | particle_state)) for each particle.
+            log_sum_exp_for_obs = max_log_term + np.log(sum_exp_diff)
+
+            # Accumulate total log-likelihoods for each particle.
+            # Since observations are assumed conditionally independent given the state,
+            # the total log-likelihood is the sum of individual log-likelihoods.
+            total_log_likelihoods += log_sum_exp_for_obs
+            # -------------------------------------------------------------
+
+        # Convert total log-likelihoods to normalized weights using log-space normalization.
+        # This prevents numerical overflow when exponentiating large positive log-likelihoods.
+        max_total_log_likelihood = np.max(total_log_likelihoods)
+
+        # Handle cases where all total_log_likelihoods are effectively negative infinity
+        # (meaning all particles are extremely unlikely given observations).
+        if np.isneginf(max_total_log_likelihood):
+            # Default to uniform weights
+            return np.ones(N_particles) / N_particles
+
+        # Compute unnormalized weights: exp(log(w_i) - log(w_max)) = w_i / w_max
+        unnormalized_weights = np.exp(
+            total_log_likelihoods - max_total_log_likelihood)
+
+        # Normalize the weights so they sum to 1.
+        sum_unnormalized_weights = np.sum(unnormalized_weights)
+        if sum_unnormalized_weights == 0:
+            # If all unnormalized weights are 0 (e.g., due to extreme underflow or poor initial guess),
+            # return uniform weights to prevent filter collapse.
+            return np.ones(N_particles) / N_particles
+        else:
+            normalized_weights = unnormalized_weights / sum_unnormalized_weights
+
+        return normalized_weights
+
+
+class NearestNeighborObservation(BallObservation):  # Renamed class for clarity
+    def __init__(self, ball_num: int, var_scale: float = 10):
+        super().__init__(ball_num)
+        self.R = np.eye(2)
+        np.fill_diagonal(self.R, var_scale)
+
+        self.R_inv = np.linalg.inv(self.R)
+        self.det_R = np.linalg.det(self.R)
+        self.k_dim = 2  # Dimension of each observation (x, y)
+
+        self.noise_distribution = multivariate_normal(
+            np.zeros(self.k_dim), self.R)
+
+    def observe(self, state: np.ndarray):
+        particle_num = state.shape[0]
+        noise = self.noise_distribution.rvs(size=particle_num * self.ball_num)
+        return super().observe(state) + noise.reshape(particle_num, self.k_dim, self.ball_num)
+
+    def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
+        N_particles = states.shape[0]  # Number of particles
+
+        # predicted_positions shape: (N_particles, 2, ball_num)
+        predicted_positions = super().observe(states)
+
+        # single_observe shape: (2, ball_num_observed)
+        # Transpose to (ball_num_observed, 2) for easier iteration over observations
+        single_observe_T = single_observe.T  # shape: (ball_num_observed, 2)
+        # Actual number of observed points
+        ball_num_observed = single_observe_T.shape[0]
+
+        # Initialize total log-likelihoods for each particle
+        # These will be accumulated for each observed point
+        total_log_likelihoods = np.zeros(N_particles)
+
+        # Handle case with no observations:
+        if ball_num_observed == 0:
+            return np.ones(N_particles) / N_particles  # Return uniform weights
+
+        # Check for scenarios with no predicted balls
+        if self.ball_num == 0:
+            # If no predicted balls, and there are observations, this scenario is problematic
+            # All particles effectively have zero likelihood if there's nothing to match.
+            # Returning uniform weights as a safe fallback, or a small epsilon likelihood.
+            return np.ones(N_particles) / N_particles
+
+        # Iterate through each actual observed point (o_x, o_y)
+        for obs_idx in range(ball_num_observed):
+            current_obs = single_observe_T[obs_idx, :]  # Shape: (2,)
+
+            # component_log_likelihoods will store the log-likelihood of current_obs
+            # given each predicted ball's position, for all particles.
+            # Shape: (N_particles, self.ball_num)
+            component_log_likelihoods = np.zeros((N_particles, self.ball_num))
+
+            for ball_idx in range(self.ball_num):
+                # predicted_pos_for_ball_idx shape: (N_particles, 2)
+                # These are the means (mu_k) for the GMM components for each particle.
+                predicted_pos_for_ball_idx = predicted_positions[:, :, ball_idx]
+
+                # Using the custom vectorized logpdf function
+                logpdf = multivariate_normal_logpdf_vectorized(current_obs.flatten(),
+                                                               means=predicted_pos_for_ball_idx,
+                                                               cov=self.R)
+                component_log_likelihoods[:, ball_idx] = logpdf
+
+            # -------------------------------------------------------------
+            # KEY CHANGE FOR NEAREST NEIGHBOR (NN) / MAX LIKELIHOOD ASSOCIATION
+            # We take the maximum log-likelihood for each observation across all predicted balls.
+            # This represents the "best match" for the current observation for each particle.
+
+            # log_likelihood_for_obs shape: (N_particles,)
+            # This is log( p(current_obs | particle_state, best_association_for_obs) )
+            log_likelihood_for_obs = np.max(component_log_likelihoods, axis=1)
+
+            # Accumulate total log-likelihoods for each particle.
+            # Since observations are assumed conditionally independent given the state,
+            # the total log-likelihood is the sum of individual log-likelihoods.
+            total_log_likelihoods += log_likelihood_for_obs
+            # -------------------------------------------------------------
+
+        # Convert total log-likelihoods to normalized weights using log-space normalization.
+        max_total_log_likelihood = np.max(total_log_likelihoods)
+
+        # Handle cases where all total_log_likelihoods are effectively negative infinity
+        if np.isneginf(max_total_log_likelihood):
+            # Default to uniform weights
+            return np.ones(N_particles) / N_particles
+
+        unnormalized_weights = np.exp(
+            total_log_likelihoods - max_total_log_likelihood)
+
+        sum_unnormalized_weights = np.sum(unnormalized_weights)
+        if sum_unnormalized_weights == 0:
+            return np.ones(N_particles) / N_particles
+        else:
+            normalized_weights = unnormalized_weights / sum_unnormalized_weights
+
+        return normalized_weights
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
