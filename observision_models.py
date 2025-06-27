@@ -115,7 +115,7 @@ class OrderedStudentTObservation(BallObservation):
         observs = single_observe.reshape(-1, order='F')
         log_likelihoods = t.logpdf(
             observs, df=self.v, scale=self.scale, loc=expected_observations)
-        # TODO why mean is better?
+        # TODO why mean is better? it should be sum
         log_likelihoods = np.mean(log_likelihoods, axis=1)
 
         max_log_likelihood = np.max(log_likelihoods)
@@ -127,42 +127,6 @@ class OrderedStudentTObservation(BallObservation):
 
         return unnormalized_weights / np.sum(unnormalized_weights)
 
-    def evaluation1(self, single_observe: np.ndarray, states: np.ndarray):
-        N = states.shape[0]  # 粒子数
-        B = self.ball_num    # 预测小球数
-        O = single_observe.shape[-1]  # 观测小球数（允许 O ≠ B）
-
-        # 粒子预测：形状 (N, 2, B)
-        predicted_positions = super().observe(states)
-
-        # 观测点 (2, O) → (O, 2)
-        observed_points = single_observe.T  # (O, 2)
-
-        log_likelihoods = np.zeros(N)
-
-        for obs in observed_points:
-            # obs 是形状 (2,) 的观测点
-
-            # 对每个预测点 i，计算 log P(obs | p_i) ，预测点形状: (N, 2, B)
-            pred_x = predicted_positions[:, 0, :]  # (N, B)
-            pred_y = predicted_positions[:, 1, :]  # (N, B)
-
-            logpdf_x = t.logpdf(obs[0], df=self.v,
-                                scale=self.scale, loc=pred_x)  # (N, B)
-            logpdf_y = t.logpdf(obs[1], df=self.v,
-                                scale=self.scale, loc=pred_y)  # (N, B)
-
-            logpdf = logpdf_x + logpdf_y  # (N, B)
-
-            # soft assignment: log-sum-exp over predicted balls
-            # 使用 logsumexp for numerical stability
-            log_prob = logsumexp(logpdf - np.log(B), axis=1)  # (N,)
-            log_likelihoods += log_prob
-
-        # Normalize
-        max_log_likelihood = np.max(log_likelihoods)
-        weights = np.exp(log_likelihoods - max_log_likelihood)
-        return weights / np.sum(weights)
 
 
 class UnorderedStudentTObservation(BallObservation):
