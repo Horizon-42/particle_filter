@@ -474,61 +474,49 @@ class GMMObservation2(BallObservation):
     def evaluation(self, single_observe: np.ndarray, states: np.ndarray):
         N_particles = states.shape[0]  # Number of particles
 
-        # predicted_positions shape: (N_particles, 2, ball_num)
+        # predicted_positions shape: (N_particles, 2, 1)
         predicted_positions = super().observe(states)
+        # GMM component weights (phi_k). Assuming equal weights for each predicted ball.
+        # This is the prior probability of an observation coming from a specific ball.
+        log_phi = np.log(1.0 / self.ball_num)
+        component_log_likelihoods = np.zeros(
+            shape=(N_particles, self.ball_num))
 
-        log_likelihoods_componients = np.zeros(
-            shape=(N_particles, self.orders_num))
+        for obs_idx in range(self.ball_num):
+            component_log_likelihoods[:, obs_idx] = multivariate_normal_logpdf_vectorized(single_observe[:, obs_idx].flatten(),
+                                                                                          means=predicted_positions[
+                :, :, 0],
+                cov=self.R)
 
-        # Iterate through each actual observed point (o_x, o_y)
-        # TODO 计算所有可能分布的联合似然
-        for i in range(self.orders_num):
-            # Shape: (2,)
-            current_obs = single_observe[:, self.observ_orders[i]]
+        # # -------------------------------------------------------------
+        # # Apply the Log-Sum-Exp trick to calculate log(sum_k (phi_k * N_k)) for each particle.
+        # # This accounts for the uncertainty of which predicted ball corresponds to current_obs.
 
-            # GMM component weights (phi_k). Assuming equal weights for each predicted ball.
-            # This is the prior probability of an observation coming from a specific ball.
-            log_phi = np.log(1.0 / self.ball_num)
-            component_log_likelihoods = np.zeros(
-                shape=(N_particles, self.ball_num))
+        # # Add log(phi_k) to each component's log-likelihood
+        # # log_terms shape: (N_particles, self.ball_num)
+        log_likelihoods = logsumexp(
+            log_phi + component_log_likelihoods,
+            axis=1
+        )
+        # component_log_likelihoods[:] = np.exp(
+        #     component_log_likelihoods[:])
+        # component_log_likelihoods[:] /= np.sum(component_log_likelihoods[:])
 
-            for ball_idx in range(self.ball_num):
-                component_log_likelihoods[:, ball_idx] = multivariate_normal_logpdf_vectorized(current_obs[:, ball_idx].flatten(),
-                                                                                               means=predicted_positions[
-                                                                                                   :, :, ball_idx],
-                                                                                               cov=self.R)
+        # log_likelihoods = np.max(component_log_likelihoods, axis=1)
 
-            # -------------------------------------------------------------
-            # Apply the Log-Sum-Exp trick to calculate log(sum_k (phi_k * N_k)) for each particle.
-            # This accounts for the uncertainty of which predicted ball corresponds to current_obs.
-
-            # Add log(phi_k) to each component's log-likelihood
-            # log_terms shape: (N_particles, self.ball_num)
-            log_sum_exp_for_obs = logsumexp(
-                log_phi + component_log_likelihoods,
-                axis=1
-            )
-
-            # Accumulate total log-likelihoods for each particle.
-            # Since observations are assumed conditionally independent given the state,
-            # the total log-likelihood is the sum of individual log-likelihoods.
-            log_likelihoods_componients[:, i] = log_sum_exp_for_obs
-            # -------------------------------------------------------------
-
-        total_log_likelihoods = np.sum(log_likelihoods_componients, axis=1)
         # Convert total log-likelihoods to normalized weights using log-space normalization.
         # This prevents numerical overflow when exponentiating large positive log-likelihoods.
-        max_total_log_likelihood = np.max(total_log_likelihoods)
+        max_log_likelihood = np.max(log_likelihoods)
 
         # Handle cases where all total_log_likelihoods are effectively negative infinity
         # (meaning all particles are extremely unlikely given observations).
-        if np.isneginf(max_total_log_likelihood):
+        if np.isneginf(max_log_likelihood):
             # Default to uniform weights
             return np.ones(N_particles) / N_particles
 
         # Compute unnormalized weights: exp(log(w_i) - log(w_max)) = w_i / w_max
         unnormalized_weights = np.exp(
-            total_log_likelihoods - max_total_log_likelihood)
+            log_likelihoods - max_log_likelihood)
 
         # Normalize the weights so they sum to 1.
         sum_unnormalized_weights = np.sum(unnormalized_weights)

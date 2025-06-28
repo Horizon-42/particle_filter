@@ -41,7 +41,7 @@ class NormalTransition(BallTransition):
         super().__init__(delta_t)
         # sigma for normal noise
         self.Q = np.eye(4)
-        np.fill_diagonal(self.Q, [20, 20, 100, 100])
+        np.fill_diagonal(self.Q, [20, 20, 50, 50])
 
     def propagate(self, states: np.ndarray):
         N_particles = states.shape[0]
