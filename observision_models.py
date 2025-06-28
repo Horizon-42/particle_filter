@@ -498,11 +498,6 @@ class GMMObservation2(BallObservation):
             log_phi + component_log_likelihoods,
             axis=1
         )
-        # component_log_likelihoods[:] = np.exp(
-        #     component_log_likelihoods[:])
-        # component_log_likelihoods[:] /= np.sum(component_log_likelihoods[:])
-
-        # log_likelihoods = np.max(component_log_likelihoods, axis=1)
 
         # Convert total log-likelihoods to normalized weights using log-space normalization.
         # This prevents numerical overflow when exponentiating large positive log-likelihoods.
