@@ -3,7 +3,7 @@ from math_utils import random_diagonal_cov, multivariate_normal_pdf_vectorized, 
 from scipy.stats import multivariate_normal
 from utils import plot_observations
 from scipy.stats import t
-from itertools import permutations
+from itertools import product
 from scipy.optimize import linear_sum_assignment
 from scipy.special import logsumexp
 from scipy.spatial.distance import cdist
@@ -27,6 +27,9 @@ class BallObservation:
         self.C = np.array([[1, 0, 0, 0],
                   [0, 1, 0, 0]], dtype=float)
         self.ball_num = ball_num
+        self.pairs = list(product(range(self.ball_num), range(self.ball_num)))
+        self.pairs_num = len(self.pairs)
+        print(self.pairs_num)
 
     def observe(self, state: np.ndarray):
         return self.C@state
@@ -180,8 +183,10 @@ class UnorderedStudentTObservation(BallObservation):
 
         # Log-prior for GMM components (assuming uniform: 1/B)
         # This will be added to each component's log-likelihood before logsumexp
-        log_prior_component = -np.log(N_predicted_balls)
+        log_prior_component = -np.log(self.ball_num)
 
+        log_likelihood_components = np.zeros(
+            shape=(N_particles, N_observed_points, N_predicted_balls))
         # Iterate through each actual observed point
         for obs_idx in range(N_observed_points):
             current_obs = single_observe[:, obs_idx]  # Shape: (2,)
@@ -205,21 +210,21 @@ class UnorderedStudentTObservation(BallObservation):
 
             # Combine x and y log-PDFs to get the 2D joint log-PDF for each component
             # (Assuming independence of x and y dimensions, which is implied by your scale usage)
-            log_likelihood_components = logpdf_x_comp + \
-                logpdf_y_comp  # (N_particles, N_predicted_balls)
+            log_likelihood_components[:, obs_idx, :] = normalize_log_likelihoods(logpdf_x_comp +
+                                                                                 # (N_particles, N_predicted_balls)
+                                                                                 logpdf_y_comp)
 
-            # Apply Log-Sum-Exp for soft assignment (GMM-like behavior)
-            # log_prob_for_obs_per_particle shape: (N_particles,)
-            # This computes log( sum_k (phi_k * P(obs | mu_k)) ) for each particle
-            log_prob_for_obs_per_particle = logsumexp(
-                # Add prior (log(1/B))
-                log_prior_component + log_likelihood_components,
-                axis=1  # Sum over predicted balls for each particle
-            )
+        log_likelihood_components = log_likelihood_components.reshape(
+            N_particles, -1)
+        print(
+            f"log_likelihood_components shape:{log_likelihood_components.shape}")
 
-            # Accumulate total log-likelihoods for each particle
-            # Assuming observations are conditionally independent given the state
-            total_log_likelihoods += log_prob_for_obs_per_particle
+        # log_likelihood_components[:] = normalize_log_likelihoods(
+        #     log_likelihood_components[:])
+        total_log_likelihoods = logsumexp(
+            log_prior_component+log_likelihood_components, axis=1)
+
+        # total_log_likelihoods = np.max(log_likelihood_components, axis=1)
 
         # --- Normalize Weights using Log-Space Normalization ---
         max_log_likelihood = np.max(total_log_likelihoods)
@@ -561,7 +566,7 @@ if __name__ == "__main__":
     ball_num = 3
     state = np.random.rand(2, 4, ball_num)*100
 
-    ideal_observ = BallObservation()
+    ideal_observ = BallObservation(ball_num)
 
     print(f"True states:\n {state}")
 
@@ -571,7 +576,7 @@ if __name__ == "__main__":
     print("--------------with onise---------------------")
 
     # print(state)
-    observe_model = NormalObservation(ball_num)
+    observe_model = UnorderedStudentTObservation(ball_num=ball_num)
     noisy_observe = observe_model.observe(state)
     print(state.shape, noisy_observe.shape)
     print(f"Noise observe:\n {noisy_observe}")
