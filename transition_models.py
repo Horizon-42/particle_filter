@@ -41,7 +41,7 @@ class NormalTransition(BallTransition):
         super().__init__(delta_t)
         # sigma for normal noise
         self.Q = np.eye(4)
-        np.fill_diagonal(self.Q, [0.5, 0.5, 0.1, 0.1])
+        np.fill_diagonal(self.Q, [20, 20, 100, 100])
 
     def propagate(self, states: np.ndarray):
         N_particles = states.shape[0]
@@ -51,6 +51,7 @@ class NormalTransition(BallTransition):
         noises = np.random.multivariate_normal(
             np.zeros(D_state), self.Q, size=N_particles*N_ball).reshape(N_particles, D_state, N_ball)
         return super().propagate(states) + noises
+        # return noises
 
 
 class UniformTransition(BallTransition):
@@ -58,10 +59,10 @@ class UniformTransition(BallTransition):
         super().__init__(delta_t)
 
         # position R
-        self.position_R = 2
+        self.position_R = 20
 
         # speed R
-        self.speed_R = 1
+        self.speed_R = 30
 
     def propagate(self, states: np.ndarray):
         N_particles = states.shape[0]
@@ -73,7 +74,9 @@ class UniformTransition(BallTransition):
         # pos_noise = np.zeros(shape=(N_particles, 2, N_ball))
         speed_noise = sample_points_in_circle(
             (0, 0), self.speed_R, N_particles*N_ball).reshape(N_particles, 2, N_ball)
-        return super().propagate(states) + np.concatenate([pos_noise, speed_noise], axis=1)
+        noise = np.concatenate([pos_noise, speed_noise], axis=1)
+        return super().propagate(states) + noise
+        return noise
 
 
 class StudentTTransition(BallTransition):

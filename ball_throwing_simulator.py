@@ -18,6 +18,7 @@ class BallThrowingSimulator:
         self.init_state = init_state
 
         self.trans_model = BallTransition(delta_t)
+        # self.trans_model = NormalTransition(delta_t)
         self.observe_model = NormalObservation(
             ball_num) if observ_model is None else observ_model
 

@@ -11,7 +11,9 @@ class ParticleFilter:
     """
 
     def __init__(self, delta_t: float, particle_num: int, ball_num: int,
-                 transition_type: TransitionType, observ_model: BallObservation):
+                 transition_type: TransitionType, observ_model: BallObservation,
+                 pos_range: list[float] = [-100, 100],
+                 speed_range: list[float] = [-100, 100]):
         self.N = particle_num
 
         self.trans_model: BallTransition = None
@@ -27,20 +29,20 @@ class ParticleFilter:
         self.observe_model: BallObservation = observ_model
 
         # use gaussian to init particles
-        x = np.random.uniform(-50, 50)
-        y = np.random.uniform(-50, 50)
-        vx = np.random.uniform(0, 20)
-        vy = np.random.uniform(0, 20)
-
         self.init_particles = np.zeros(shape=(particle_num, 4, ball_num))
 
         for i in range(0, ball_num):
             # self.init_particles[:, :, i] = self.init_particles[:, :, 0]
-            xys = sample_points_in_circle((x, y), 100, particle_num)
-            vs = sample_points_in_circle((vx, vy), 20, particle_num)
+            xs = np.random.uniform(
+                pos_range[0], pos_range[1], size=particle_num)
+            ys = np.random.uniform(
+                pos_range[0], pos_range[1], size=particle_num)
+            vxs = np.random.uniform(
+                speed_range[0], speed_range[1], size=particle_num)
+            vys = np.random.uniform(
+                speed_range[0], speed_range[1],  size=particle_num)
 
-            self.init_particles[:, :, i] = np.concatenate(
-                [xys, vs], 1).reshape(particle_num, 4)
+            self.init_particles[:, :, i] = np.vstack([xs, ys, vxs, vys]).T
 
 
         self.init_weights = np.ones(self.N) / self.N  # uniform weights
@@ -97,7 +99,7 @@ class ParticleFilter:
         print(
             f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
         # sample from st-1
-        new_particles = self.multinomial_resample(particles, weights)
+        new_particles = self.systematic_resample(particles, weights)
 
         # propagate the particles
         new_particles = self.trans_model.propagate(new_particles)

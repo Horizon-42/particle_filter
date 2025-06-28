@@ -175,7 +175,7 @@ def plot_particles(ax, particles: np.ndarray, weights: np.ndarray, colormap='vir
 
         ax.scatter(x, y, color=color, alpha=0.5, s=1)
         ax.quiver(x, y, vx, vy, angles='xy', scale_units='xy',
-                  scale=3, color=color, alpha=0.5)
+                  scale=5, width=0.002, color=color, alpha=0.5)
     # draw indicator for colormap
     sm = plt.cm.ScalarMappable(
         cmap=colormap, norm=plt.Normalize(vmin=0, vmax=1))
