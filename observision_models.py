@@ -312,12 +312,29 @@ class NearestStudentTObservation(BallObservation):
 
             # Combine x and y log-PDFs to get the 2D joint log-PDF for each component
             # (Assuming independence of x and y dimensions, which is implied by your scale usage)
-            log_likelihood_components[:, :,
-                                      obs_idx] = logpdf_x_comp + logpdf_y_comp
+            # Shape(N_particles, N_preducted_balls)
+            log_likelihoods_per_obs = logpdf_x_comp + logpdf_y_comp
+            # exp convert to parobs
+            likelihoods_per_obs = np.exp(log_likelihoods_per_obs)
+            # normalize for the obs
+            likelihoods_per_obs[:] /= np.sum(likelihoods_per_obs[:])
+            log_likelihood_components[:, :, obs_idx] = np.log(
+                likelihoods_per_obs)
 
+        # Sum likelihoods for each ball in all particles
+        total_log_likelihoods_per_balls = np.sum(
+            log_likelihood_components, axis=0)
 
-        total_log_likelihoods = np.sum(
-            np.max(log_likelihood_components, axis=1), axis=1)
+        # total_log_likelihoods = np.sum(
+        #     log_likelihood_components[:,:,], axis=1)
+        loglikelihoods_per_balls = np.zeros(
+            shape=(N_particles, N_predicted_balls))
+        for i in range(N_predicted_balls):
+            loglikelihoods_per_balls[:, i] = log_likelihood_components[:, i, np.argmax(
+                total_log_likelihoods_per_balls[i, :])]
+        total_log_likelihoods = np.mean(
+            loglikelihoods_per_balls, axis=1)
+
         # --- Normalize Weights using Log-Space Normalization ---
         max_log_likelihood = np.max(total_log_likelihoods)
 
@@ -377,6 +394,7 @@ class GMMObservation(BallObservation):
         log_phi = np.log(1.0 / self.ball_num)
 
         # Iterate through each actual observed point (o_x, o_y)
+        # TODO 计算所有可能分布的联合似然
         for obs_idx in range(ball_num_observed):
             current_obs = single_observe_T[obs_idx, :]  # Shape: (2,)
 
