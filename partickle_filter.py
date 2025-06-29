@@ -169,16 +169,25 @@ class ParticleFilter:
         print(
             f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
         # sample from st-1
-        new_particles = self.residual_resample(particles, weights)
+        new_particles = self.systematic_resample(particles, weights)
 
         # propagate the particles
         new_particles = self.trans_model.propagate(new_particles)
         # print(new_particles[:10])
 
-        if observation is not None:
-            new_weights = self.observe_model.evaluation(
-                observation, new_particles)
-        else:
-            new_weights = np.ones(self.N) / self.N
+        if observation is None:
+            return new_particles, np.ones(self.N) / self.N
+
+        # MH process
+        # current_particles = self.trans_model.propagate(particles)
+        # current_prob = self.observe_model.evaluation(observation, particles)
+
+        # new_prob = self.observe_model.evaluation(observation, new_particles)
+
+        # alphas = new_prob/current_prob
+        # chances = np.random.rand(new_particles.shape[0])
+        # reject = chances > alphas
+        # new_particles[reject] = current_particles[reject]
+        new_weights = self.observe_model.evaluation(observation, new_particles)
 
         return new_particles, new_weights
