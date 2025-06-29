@@ -14,7 +14,7 @@ class BallTransition:
     Qt = At@Qt-1 + Bt@action_t-1
     """
 
-    def __init__(self, delta_t):
+    def __init__(self, delta_t: float):
         self.A = np.array([[1, 0, delta_t, 0],
                            [0, 1, 0, delta_t],
                            [0, 0, 1, 0],
@@ -29,7 +29,15 @@ class BallTransition:
         self.action = np.array([0, -10, 0]).reshape((3, 1))
 
     def propagate(self, states: np.ndarray):
-        return self.A @ states + self.B @ self.action
+        next_states = self.A @ states + self.B @ self.action
+        ball_num = next_states.shape[-1]
+        # TODO make it more relisitic
+        for i in range(ball_num):
+            hit_ground = next_states[:, 1, i] < 0
+            next_states[hit_ground, 3, i] *= -1
+        return next_states
+
+
 
 
 class NormalTransition(BallTransition):
