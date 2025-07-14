@@ -13,9 +13,10 @@ class ParticleFilter:
     def __init__(self, delta_t: float, particle_num: int, ball_num: int,
                  transition_type: TransitionType, observ_model: BallObservation,
                  pos_range: list[float] = [-100, 100],
-                 speed_range: list[float] = [-100, 100]):
+                 speed_range: list[float] = [0, 100]):
         self.N = particle_num
 
+        # Select the transition model based on the type
         self.trans_model: BallTransition = None
         if transition_type == TransitionType.Normal:
             self.trans_model = NormalTransition(delta_t=delta_t)
@@ -188,6 +189,8 @@ class ParticleFilter:
         # chances = np.random.rand(new_particles.shape[0])
         # reject = chances > alphas
         # new_particles[reject] = current_particles[reject]
+
+        # judge if recompute weights or not
         new_weights = self.observe_model.evaluation(observation, new_particles)
 
         return new_particles, new_weights
