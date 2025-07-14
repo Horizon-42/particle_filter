@@ -4,7 +4,6 @@ Run run_partickle_filter.ipynb
 # Transition Models
 transition_models.py
 ## Normal 2d noises
-![alt text](image.png)
 ## Uniform Distributed in circle
 ## Student T
 Like Normal Distribution, but with arguments v and scale, can have more thin or wide distribution.
