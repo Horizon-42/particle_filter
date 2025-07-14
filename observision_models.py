@@ -153,6 +153,8 @@ class UnorderedStudentTObservation(BallObservation):
             component_log_likelihoods[:,
                                       obs_idx] = log_x_likelihoods+log_y_likelihoods
 
+        ball_idx = np.argmax(component_log_likelihoods, axis=1)
+
         log_likelihoods = logsumexp(log_phi+component_log_likelihoods, axis=1)
 
         # --- Normalize Weights using Log-Space Normalization ---
@@ -161,7 +163,7 @@ class UnorderedStudentTObservation(BallObservation):
         # Handle cases where all log-likelihoods are effectively negative infinity
         if np.isneginf(max_log_likelihood):
             # Default to uniform weights
-            return np.ones(N_particles) / N_particles
+            return np.ones(N_particles) / N_particles, ball_idx
 
         # Compute unnormalized weights: exp(log(w_i) - log(w_max)) = w_i / w_max
         unnormalized_weights = np.exp(
@@ -172,11 +174,11 @@ class UnorderedStudentTObservation(BallObservation):
         if sum_unnormalized_weights == 0:
             # If all unnormalized weights are 0 (e.g., due to extreme underflow),
             # return uniform weights to prevent filter collapse.
-            return np.ones(N_particles) / N_particles
+            return np.ones(N_particles) / N_particles, ball_idx
         else:
             normalized_weights = unnormalized_weights / sum_unnormalized_weights
 
-        return normalized_weights
+        return normalized_weights, ball_idx
 
 
 class NearestStudentTObservation(BallObservation):
@@ -211,7 +213,6 @@ class NearestStudentTObservation(BallObservation):
         # Particle predictions: shape (N_particles, 2, 1)
         predicted_positions = super().observe(states)
 
-        log_phi = -np.log(self.ball_num)
         component_log_likelihoods = np.zeros(
             shape=(N_particles, self.ball_num))
 
@@ -230,7 +231,7 @@ class NearestStudentTObservation(BallObservation):
             component_log_likelihoods[:,
                                       obs_idx] = normalize_log_likelihoods(log_likelihoods_per_ob)
 
-        # log_likelihoods = logsumexp(log_phi+component_log_likelihoods, axis=1)
+        ball_dix = np.argmax(component_log_likelihoods, axis=1)
         log_likelihoods = np.max(component_log_likelihoods, axis=1)
 
         # --- Normalize Weights using Log-Space Normalization ---
@@ -239,7 +240,7 @@ class NearestStudentTObservation(BallObservation):
         # Handle cases where all log-likelihoods are effectively negative infinity
         if np.isneginf(max_log_likelihood):
             # Default to uniform weights
-            return np.ones(N_particles) / N_particles
+            return np.ones(N_particles) / N_particles, ball_dix
 
         # Compute unnormalized weights: exp(log(w_i) - log(w_max)) = w_i / w_max
         unnormalized_weights = np.exp(
@@ -250,11 +251,11 @@ class NearestStudentTObservation(BallObservation):
         if sum_unnormalized_weights == 0:
             # If all unnormalized weights are 0 (e.g., due to extreme underflow),
             # return uniform weights to prevent filter collapse.
-            return np.ones(N_particles) / N_particles
+            return np.ones(N_particles) / N_particles, ball_dix
         else:
             normalized_weights = unnormalized_weights / sum_unnormalized_weights
 
-        return normalized_weights
+        return normalized_weights, ball_dix
 
 
 class GMMObservation(BallObservation):
@@ -298,6 +299,7 @@ class GMMObservation(BallObservation):
             log_phi + component_log_likelihoods,
             axis=1
         )
+        ball_idx = np.argmax(component_log_likelihoods, axis=1)
 
         # Convert total log-likelihoods to normalized weights using log-space normalization.
         # This prevents numerical overflow when exponentiating large positive log-likelihoods.
@@ -307,7 +309,7 @@ class GMMObservation(BallObservation):
         # (meaning all particles are extremely unlikely given observations).
         if np.isneginf(max_log_likelihood):
             # Default to uniform weights
-            return np.ones(N_particles) / N_particles
+            return np.ones(N_particles) / N_particles, ball_idx
 
         # Compute unnormalized weights: exp(log(w_i) - log(w_max)) = w_i / w_max
         unnormalized_weights = np.exp(
@@ -318,11 +320,11 @@ class GMMObservation(BallObservation):
         if sum_unnormalized_weights == 0:
             # If all unnormalized weights are 0 (e.g., due to extreme underflow or poor initial guess),
             # return uniform weights to prevent filter collapse.
-            return np.ones(N_particles) / N_particles
+            return np.ones(N_particles) / N_particles, ball_idx
         else:
             normalized_weights = unnormalized_weights / sum_unnormalized_weights
 
-        return normalized_weights
+        return normalized_weights, ball_idx
 
 
 class NearestNormalObservation(BallObservation):  # Renamed class for clarity
@@ -359,6 +361,7 @@ class NearestNormalObservation(BallObservation):  # Renamed class for clarity
                 cov=self.R)
 
         log_likelihoods = np.max(component_log_likelihoods, axis=1)
+        ball_idx = np.argmax(component_log_likelihoods, axis=1)
 
         # Convert total log-likelihoods to normalized weights using log-space normalization.
         # This prevents numerical overflow when exponentiating large positive log-likelihoods.
@@ -368,7 +371,7 @@ class NearestNormalObservation(BallObservation):  # Renamed class for clarity
         # (meaning all particles are extremely unlikely given observations).
         if np.isneginf(max_log_likelihood):
             # Default to uniform weights
-            return np.ones(N_particles) / N_particles
+            return np.ones(N_particles) / N_particles, ball_idx
 
         # Compute unnormalized weights: exp(log(w_i) - log(w_max)) = w_i / w_max
         unnormalized_weights = np.exp(
@@ -379,11 +382,11 @@ class NearestNormalObservation(BallObservation):  # Renamed class for clarity
         if sum_unnormalized_weights == 0:
             # If all unnormalized weights are 0 (e.g., due to extreme underflow or poor initial guess),
             # return uniform weights to prevent filter collapse.
-            return np.ones(N_particles) / N_particles
+            return np.ones(N_particles) / N_particles, ball_idx
         else:
             normalized_weights = unnormalized_weights / sum_unnormalized_weights
 
-        return normalized_weights
+        return normalized_weights, ball_idx
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -415,7 +418,7 @@ if __name__ == "__main__":
 
     # exit(0)
 
-    probs = observe_model.evaluation(noisy_observe[0], state)
+    probs, _ = observe_model.evaluation(noisy_observe[0], state)
     print(f"final probs shape:{probs.shape}")
 
     fig, ax = plt.subplots(figsize=(12, 12))

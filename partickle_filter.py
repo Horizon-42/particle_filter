@@ -48,6 +48,8 @@ class ParticleFilter:
 
         self.init_weights = np.ones(self.N) / self.N  # uniform weights
 
+        self.ball_indices = np.random.randint(0, ball_num, size=self.N)
+
     def residual_resample(self, particles: np.ndarray, weights: np.ndarray):
         """
         Perform residual resampling on particle weights.
@@ -114,6 +116,8 @@ class ParticleFilter:
             # 将随机采样的粒子添加到新索引数组的剩余位置
             new_indices[current_idx:] = remaining_indices
 
+        # Update ball indices based on selected particles
+        self.ball_indices = self.ball_indices[new_indices]
         # 返回重采样后的粒子索引
         return particles[new_indices]
 
@@ -140,6 +144,9 @@ class ParticleFilter:
         # This is a highly efficient way to do it using numpy broadcasting and searchsorted
         indices = np.searchsorted(cumulative_sum, points)
 
+        # Update ball indices based on selected particles
+        self.ball_indices = self.ball_indices[indices]
+
         return particles[indices]  # Select particles using the found indices
 
     def multinomial_resample(self, particles: np.ndarray, weights: np.ndarray):
@@ -161,6 +168,8 @@ class ParticleFilter:
         # Find the indices of the particles to be selected
         # This is a highly efficient way to do it using numpy broadcasting and searchsorted
         indices = np.searchsorted(cumulative_sum, points)
+        # Update ball indices based on selected particles
+        self.ball_indices = self.ball_indices[indices]
 
         return particles[indices]  # Select particles using the found indices
 
@@ -179,18 +188,8 @@ class ParticleFilter:
         if observation is None:
             return new_particles, np.ones(self.N) / self.N
 
-        # MH process
-        # current_particles = self.trans_model.propagate(particles)
-        # current_prob = self.observe_model.evaluation(observation, particles)
-
-        # new_prob = self.observe_model.evaluation(observation, new_particles)
-
-        # alphas = new_prob/current_prob
-        # chances = np.random.rand(new_particles.shape[0])
-        # reject = chances > alphas
-        # new_particles[reject] = current_particles[reject]
-
         # judge if recompute weights or not
-        new_weights = self.observe_model.evaluation(observation, new_particles)
+        new_weights, self.ball_indices = self.observe_model.evaluation(
+            observation, new_particles)
 
         return new_particles, new_weights
