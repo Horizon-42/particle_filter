@@ -49,22 +49,22 @@ class ParticleFilter:
 
     def residual_resample(self, particles: np.ndarray, weights: np.ndarray):
         """
-        对粒子权重进行残差重采样。
+        Perform residual resampling on particle weights.
 
-        参数:
-        weights (numpy.ndarray): 一个包含所有粒子归一化权重的 NumPy 数组。
-                                这些权重必须是非负数且总和接近 1。
+        Parameters:
+        weights (numpy.ndarray): A NumPy array containing the normalized weights of all particles.
+                                 These weights must be non-negative and sum approximately to 1.
 
-        返回:
-        numpy.ndarray: 一个包含 N 个整数索引的 NumPy 数组，表示重采样后粒子的新索引。
-                    你可以使用这些索引来从旧的粒子集中构建新的粒子集。
+        Returns:
+        numpy.ndarray: A NumPy array containing N integer indices, representing the new indices of particles after resampling.
+                       You can use these indices to construct a new particle set from the old one.
         """
 
-        N = len(weights)  # 粒子总数
-        new_indices = np.zeros(N, dtype=int)  # 用于存储新粒子索引的数组
+        N = len(weights)  # total number of particles
+        new_indices = np.zeros(N, dtype=int)  # to store new indices
 
-        # --- 1. 确定性复制部分 ---
-        # 计算每个粒子期望被复制的次数 (N * w_i)
+        # --- 1. Deterministic replication part ---
+        # Compute the expected number of times each particle should be replicated (N * w_i)
         expected_counts = N * weights
 
         # 确定性地复制整数部分
