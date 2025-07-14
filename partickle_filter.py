@@ -50,6 +50,8 @@ class ParticleFilter:
 
         self.ball_indices = np.random.randint(0, ball_num, size=self.N)
 
+        self.resampled = False
+
     def residual_resample(self, particles: np.ndarray, weights: np.ndarray):
         """
         Perform residual resampling on particle weights.
@@ -70,14 +72,12 @@ class ParticleFilter:
         # Compute the expected number of times each particle should be replicated (N * w_i)
         expected_counts = N * weights
 
-        # 确定性地复制整数部分
-        # floor(expected_counts) 得到整数部分，例如 3.7 -> 3
-        # astype(int) 将浮点数转换为整数
+        # copy the integer part of expected counts
         num_copies_integer = np.floor(expected_counts).astype(int)
 
         current_idx = 0
         for i in range(N):
-            # 将粒子 i 复制 num_copies_integer[i] 次
+            # Replicate each particle according to its integer expected count
             for _ in range(num_copies_integer[i]):
                 if current_idx < N:  # 确保不会超出 new_indices 的范围
                     new_indices[current_idx] = i
@@ -85,40 +85,31 @@ class ParticleFilter:
                 else:
                     break  # 已经复制了 N 个粒子，提前退出
 
-        # --- 2. 随机复制部分 ---
-        # 计算剩余的粒子数量，这些粒子需要通过随机采样来补充
+        # --- 2. Random sampling part ---
         num_remaining_particles = N - current_idx
 
         if num_remaining_particles > 0:
-            # 计算每个粒子的“剩余权重”（小数部分）
             residual_weights = expected_counts - num_copies_integer
 
-            # 对剩余权重进行归一化，以便进行多项式采样
-            # 确保剩余权重之和不为零，避免除以零的错误
             sum_residual_weights = np.sum(residual_weights)
             if sum_residual_weights > 0:
                 normalized_residual_weights = residual_weights / sum_residual_weights
             else:
-                # 如果所有剩余权重都为零（即所有粒子都被整数次复制），
-                # 意味着 current_idx 应该已经等于 N。
-                # 如果走到这里，表示存在浮点数精度问题或逻辑错误，
-                # 简单处理为随机选择剩余粒子（不推荐，但作为兜底）
-                normalized_residual_weights = np.ones(N) / N  # 均匀分布
+                # if all residual weights are zero, somthing is wrong, use uniform distribution
+                normalized_residual_weights = np.ones(N) / N
 
-            # 使用 numpy.random.choice 进行多项式采样
-            # p 参数必须是归一化的概率分布
+            # use np.random.choice to sample the remaining particles
             remaining_indices = np.random.choice(
                 N,
                 size=num_remaining_particles,
                 p=normalized_residual_weights
             )
 
-            # 将随机采样的粒子添加到新索引数组的剩余位置
+            # Fill the remaining indices in new_indices
             new_indices[current_idx:] = remaining_indices
 
         # Update ball indices based on selected particles
         self.ball_indices = self.ball_indices[new_indices]
-        # 返回重采样后的粒子索引
         return particles[new_indices]
 
 
@@ -173,14 +164,11 @@ class ParticleFilter:
 
         return particles[indices]  # Select particles using the found indices
 
-
     def update(self, particles: np.ndarray, weights: np.ndarray, observation: np.ndarray):
-        print(f"Neff:{1/np.sum(weights**2)}")
-        print(
-            f"weighs max:{np.max(weights)}, min:{np.min(weights)}, mean:{np.mean(weights)}")
-        # sample from st-1
-        new_particles = self.systematic_resample(particles, weights)
+        neff = 1.0 / np.sum(weights**2)
+        print(f"Effective sample size: {neff}")
 
+        new_particles = self.residual_resample(particles, weights)
         # propagate the particles
         new_particles = self.trans_model.propagate(new_particles)
         # print(new_particles[:10])
