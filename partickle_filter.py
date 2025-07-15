@@ -168,7 +168,8 @@ class ParticleFilter:
         neff = 1.0 / np.sum(weights**2)
         print(f"Effective sample size: {neff}")
 
-        new_particles = self.systematic_resample(particles, weights)
+        # new_particles = self.systematic_resample(particles, weights)
+        new_particles = self.multinomial_resample(particles, weights)
         # propagate the particles
         new_particles = self.trans_model.propagate(new_particles)
         # print(new_particles[:10])

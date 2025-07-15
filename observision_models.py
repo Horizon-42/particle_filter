@@ -280,6 +280,7 @@ class GMMObservation(BallObservation):
         # GMM component weights (phi_k). Assuming equal weights for each predicted ball.
         # This is the prior probability of an observation coming from a specific ball.
         log_phi = np.log(1.0 / self.ball_num)
+        # TODO assign different weights to different balls according to their numbers
         component_log_likelihoods = np.zeros(
             shape=(N_particles, self.ball_num))
 
